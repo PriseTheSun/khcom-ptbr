@@ -1,0 +1,17 @@
+# Local-only game data and downloaded source/tool dependencies.
+/private/
+/.deps/
+/.build-tools/
+/.venv/
+/build*/
+/dist/
+/stage/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.DS_Store
+*.gba
+*.sav
+*.srm
+*.ss[0-9]
+*.bps

@@ -1,0 +1,13 @@
+{
+  "format_version": 1,
+  "commit": "5dc49b75068bfe24e07bdaf365570d64682680c3",
+  "scope": "Selected font extraction and byte round-trip; not a complete graphics inventory or runtime approval.",
+  "required_characters": "áéíóúâêôãõçàÁÉÍÓÚÂÊÔÃÕÇÀ",
+  "fonts": [
+    {"id": "message_latin", "manifest": "sprites_msg.yaml", "symbol": "gMsgLatinFontTiles", "pointer_table": "gMsgLatinFontFrames", "encoding": "game", "mapping": "latin_codepoint_index"},
+    {"id": "small", "manifest": "sprites_msg.yaml", "symbol": "gSmallFontTiles", "pointer_table": "gSmallFontFrames", "encoding": null, "mapping": "EncodeSmallFontString"},
+    {"id": "background_small", "manifest": "sprites_msg.yaml", "symbol": "gBgTextSmallFontTiles", "pointer_table": "gBgTextSmallFontFrames", "encoding": null, "mapping": "unknown"},
+    {"id": "credits_0", "manifest": "staff_roll_font.yaml", "symbol": "gStaffRollFont0Glyphs", "widths": "gStaffRollFont0Widths", "encoding": "sjis", "mapping": "staff_roll_pages_unverified"},
+    {"id": "credits_1", "manifest": "staff_roll_font.yaml", "symbol": "gStaffRollFont1Glyphs", "widths": "gStaffRollFont1Widths", "encoding": "sjis", "mapping": "staff_roll_pages_unverified"}
+  ]
+}

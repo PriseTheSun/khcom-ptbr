@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "id": "khcom-us-b8ce-rev0",
+  "game_code": "B8CE",
+  "revision": 0,
+  "title": "KINGDOMHEART",
+  "size": 33554432,
+  "sha256": "6f6e7b61bb7b6ef7e2bea6e9dd01e70570a715835cc3713abe86186fd2c4e28d",
+  "sha1": "10729bd884f8fdca7a310b6d606c52e46657aa48",
+  "crc32": "d031ce67",
+  "upstream_commit": "5dc49b75068bfe24e07bdaf365570d64682680c3",
+  "evidence": "Inspeção local de 2026-10-18; proveniência completa no OpenSpec khcom-ptbr-desktop."
+}

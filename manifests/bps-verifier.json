@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "purpose": "independent BPS interoperability verification; development only",
+  "tool": "Floating IPS",
+  "upstream": "https://github.com/Sir-Walrus/Flips",
+  "commit": "ff216a75df0987047a67d7923567dc4482ce07ac",
+  "license": "GPL-3.0-or-later",
+  "build_command": "make SRCDIR=. TARGET=cli CXX=clang++ CFLAGS=-O2",
+  "linked_into_runtime": false,
+  "distributed": false,
+  "specification": "https://github.com/Sir-Walrus/Flips/blob/ff216a75df0987047a67d7923567dc4482ce07ac/bps_spec.md",
+  "files": [
+    {
+      "path": "bps_spec.md",
+      "sha256": "6a84fc7c59425e3938d0e7ccab59fbaee37037b2135374a81fce5fb88905d303"
+    },
+    {
+      "path": "COPYING.gpl3",
+      "sha256": "0b383d5a63da644f628d99c33976ea6487ed89aaa59f0b3257992deac1171e6b"
+    },
+    {
+      "path": "libbps.cpp",
+      "sha256": "484c62a528548cc958f4637921761c2ee48d6a22dfd04119237460e5f0f0cd30"
+    },
+    {
+      "path": "libbps-suf.cpp",
+      "sha256": "563b248b6a71501c27317a6b75fd41bec3f64cfad68d03ea317e1ed0d34d2711"
+    }
+  ]
+}

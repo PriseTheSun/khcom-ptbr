@@ -1,0 +1,39 @@
+cmake_minimum_required(VERSION 3.25)
+if(CMAKE_HOST_APPLE AND NOT CMAKE_OSX_DEPLOYMENT_TARGET)
+  set(CMAKE_OSX_DEPLOYMENT_TARGET "13.0" CACHE STRING "Proposed minimum macOS version" FORCE)
+endif()
+project(khcom_ptbr_diagnostics VERSION 0.1.0 LANGUAGES C CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+include(cmake/Dependencies.cmake)
+if(APPLE)
+  # mGBA 0.10.x sets a directory-local 10.6 flag. Keep its source unmodified
+  # while selecting the same deployment baseline as the containing program.
+  target_compile_options(mgba PRIVATE "-mmacosx-version-min=${CMAKE_OSX_DEPLOYMENT_TARGET}")
+endif()
+add_library(khcom_core STATIC core/session.cpp core/sha256.cpp)
+target_include_directories(khcom_core PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(khcom_core PUBLIC mgba)
+target_compile_definitions(khcom_core PUBLIC KHCOM_DIAGNOSTIC_VERSION="${PROJECT_VERSION}")
+if(MSVC)
+  target_compile_options(khcom_core PRIVATE /W4)
+  target_compile_options(khcom_core PUBLIC /utf-8)
+else()
+  target_compile_options(khcom_core PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+add_executable(khcom-diagnostic app/diagnostic.cpp platform/sdl_preview.cpp)
+target_link_libraries(khcom-diagnostic PRIVATE khcom_core SDL3::SDL3-static)
+
+include(CTest)
+if(BUILD_TESTING)
+  add_executable(khcom-core-tests tests/cpp/core_tests.cpp)
+  target_link_libraries(khcom-core-tests PRIVATE khcom_core)
+  add_test(NAME core-contracts COMMAND khcom-core-tests)
+  add_test(NAME diagnostic-help COMMAND khcom-diagnostic --help)
+endif()
+
+# Deliberately no install/package rule: M1 is a diagnostic harness, not a release.

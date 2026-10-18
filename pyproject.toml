@@ -1,0 +1,9 @@
+[project]
+name = "khcom-ptbr-tools"
+version = "0.1.0"
+description = "Ferramentas locais verificáveis para a localização de KHCoM USA"
+requires-python = ">=3.11"
+dependencies = ["PyYAML==6.0.3"]
+
+[tool.ruff]
+line-length = 100

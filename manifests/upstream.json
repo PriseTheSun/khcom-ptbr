@@ -1,0 +1,165 @@
+{
+  "format_version": 1,
+  "repository": "https://github.com/Pheenoh/khcom",
+  "commit": "5dc49b75068bfe24e07bdaf365570d64682680c3",
+  "raw_base": "https://raw.githubusercontent.com/Pheenoh/khcom/5dc49b75068bfe24e07bdaf365570d64682680c3/",
+  "license": "CC0-1.0",
+  "scope": "Selected source and format manifests only; no ROM or game assets.",
+  "files": [
+    {
+      "path": "LICENSE.md",
+      "sha256": "6d489af6292662d9e36d34ce49423784984a5f6e41d7b58f49b01264df59fa03",
+      "size": 7047
+    },
+    {
+      "path": "README.md",
+      "sha256": "4b637b162fb80b6f979b9ab66eefbd1178ad525e2f95b2ff59891c8658d6aa8e",
+      "size": 2022
+    },
+    {
+      "path": "configure.py",
+      "sha256": "6915423229de7e53ca542df1674c6bf6f237fd8f43b77ecdc68f370cd34ccb5e",
+      "size": 16832
+    },
+    {
+      "path": "tools/textgen.py",
+      "sha256": "9ec5e9d1cdab843c0ff6a28ae40cf300a8c78503a26fc6fbdf11af60995fc77f",
+      "size": 24950
+    },
+    {
+      "path": "config/charmaps/us.yaml",
+      "sha256": "b857881fe07776a600477f0b2b06d9e1e108396fc57987000e1ff3edc723346d",
+      "size": 512
+    },
+    {
+      "path": "config/text/card_description_text.yaml",
+      "sha256": "2cdfdc7601eb2751416fbd815ce43e4011712057125ea704187a0ea30613b7d9",
+      "size": 10107
+    },
+    {
+      "path": "config/text/card_help_text.yaml",
+      "sha256": "36d70e21a7bb276de67428481d215641dc51aaba1f0e0de2d9aeb5bba4189939",
+      "size": 11165
+    },
+    {
+      "path": "config/text/card_message_text.yaml",
+      "sha256": "260bc62b3b81d72e90241223627b1dd6f071cb0a2051633aa3294ee48b123041",
+      "size": 12119
+    },
+    {
+      "path": "config/text/common_text.yaml",
+      "sha256": "956a0daf00c7f16a187c4d1e22c3bc6caced1302573d9dfd5641aa2adb27e051",
+      "size": 22027
+    },
+    {
+      "path": "config/text/event_name_text.yaml",
+      "sha256": "db411757868ce968d0b2a79f382447a651dea073e3dd071cb539aa935558c76d",
+      "size": 3606
+    },
+    {
+      "path": "config/text/event_text.yaml",
+      "sha256": "e7a16335b4d29c52c9b16243f626c836a9a4ad61e0692672aa80c3c53321a0a4",
+      "size": 167607
+    },
+    {
+      "path": "config/text/jiminy_text.yaml",
+      "sha256": "0da8af16f79c1ccce6ed1b2f0ca873532071f27cfbc197cef5e277b573515bdc",
+      "size": 754008
+    },
+    {
+      "path": "config/text/localized_names.yaml",
+      "sha256": "b255aae9b9ed8fb5d6b9125350df3ea93de2448448245a920738f62e8f750fb3",
+      "size": 139867
+    },
+    {
+      "path": "config/text/movie_subtitle_text.yaml",
+      "sha256": "81a9f1552899ecc00f7af43d9a34c79867171ab3d85a413e905b1f60311b2e15",
+      "size": 7419
+    },
+    {
+      "path": "config/text/msg_localized_text.yaml",
+      "sha256": "44b288a145ca5461ecdaee2e2aa83b44e3fc1413a0bd7f1c9922c3deee81c788",
+      "size": 436550
+    },
+    {
+      "path": "config/text/staff_roll_script_text.yaml",
+      "sha256": "e83101d53479521dbc4bd3bbf76f90f3caf261e9c8088bd8fc21e6671ec45255",
+      "size": 31702
+    },
+    {
+      "path": "config/text/ui_text.yaml",
+      "sha256": "d0a265b70559cd640f8854288b0db0d3660322ead9e3caef3ad885132f0478f3",
+      "size": 6131
+    },
+    {
+      "path": "config/assets/sprites_msg.yaml",
+      "size": 550578,
+      "sha256": "b3e396692609774d09f2e4b7dad9e6e71b66451aa622bc4d241772c97c9e5a67"
+    },
+    {
+      "path": "config/assets/staff_roll_font.yaml",
+      "size": 21249,
+      "sha256": "afff32c2cace913ec9716cbd04982229118af057a37b428edbc62be788f52d99"
+    },
+    {
+      "path": "tools/sprite_sheet.py",
+      "size": 23322,
+      "sha256": "7d2cc7e2ef910af8da1628a78c60385a78ffa1be1e53203b8ddc9429c41af0bc"
+    },
+    {
+      "path": "tools/assetgen.py",
+      "size": 50679,
+      "sha256": "ab85fb27135354c55f712ab2843d885c89e09631d36179192690a587c9e7ec74"
+    },
+    {
+      "path": "tools/m4a_assets.py",
+      "size": 19768,
+      "sha256": "9195383eb9cf0bc94c8a64e458200fe8ba1552b2572d5fa775942cd9b39c049d"
+    },
+    {
+      "path": "src/msg/msg.c",
+      "size": 174848,
+      "sha256": "f75b7fda96a85220e77006b2183a7eb768487ebe245325b8ce44c1b8769b7c5d"
+    },
+    {
+      "path": "src/menu/ms_charge.c",
+      "size": 46165,
+      "sha256": "4de02cf01bd6d182520a22da43e3929e6eeb15d0f624c4a620ed01011b72ad71"
+    },
+    {
+      "path": "src/sroll/sroll_b_char.c",
+      "size": 4196,
+      "sha256": "f03f5c08adf8d217578e69ebd43875d19844ce51b8bdbb87b4b8eedcdeacf0ef"
+    },
+    {
+      "path": "include/sroll/sroll.h",
+      "size": 8060,
+      "sha256": "2f15852c209635dbb7d101b7b355bd726bdb73da702b39413ec37946b5ce5573"
+    },
+    {
+      "path": "include/msg/msg.h",
+      "size": 8672,
+      "sha256": "f71ecad1c33d2cda2b0b79350094efe13b818e3b3c43f698aca482d2a0d41b93"
+    },
+    {
+      "path": "src/sroll/sroll_a_name.c",
+      "size": 3415,
+      "sha256": "01188af0e23d849e5b2c27fead08248c24f2fcec09bee5df6bb57e5a64e1f75b"
+    },
+    {
+      "path": "src/sroll/mode_staffroll.c",
+      "size": 151439,
+      "sha256": "6adbbcac774244a79bc4f94f8e3954afe866877ecd73ee4f1da843bba9aa5d80"
+    },
+    {
+      "path": "include/evt/msg_types.h",
+      "size": 5126,
+      "sha256": "6dc2ba9f000ab1f7f3d05be7d07430cf8a579fc9601d35ca7e6bfc540bc64aeb"
+    },
+    {
+      "path": "include/msg/text_types.h",
+      "size": 579,
+      "sha256": "ae005a6b86e2c05a43fa1fb679c5e7213d7b4449f47f6d9d3e91935ba5083864"
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "sources": {
+    "mgba": {
+      "version": "0.10.5",
+      "url": "https://codeload.github.com/mgba-emu/mgba/tar.gz/refs/tags/0.10.5",
+      "archive": "mgba-0.10.5.tar.gz",
+      "sha256": "91d6fbd32abcbdf030d58d3f562de25ebbc9d56040d513ff8e5c19bee9dacf14",
+      "license_files": [
+        "LICENSE",
+        "src/third-party/blip_buf/license.txt",
+        "src/third-party/inih/LICENSE.txt"
+      ]
+    },
+    "sdl": {
+      "version": "3.4.18",
+      "url": "https://codeload.github.com/libsdl-org/SDL/tar.gz/refs/tags/release-3.4.18",
+      "archive": "SDL-3.4.18.tar.gz",
+      "sha256": "c4b08b950bd29d83caae0ab8d884298d27046a9d30700fb42841c50992665c90",
+      "license_files": [
+        "LICENSE.txt",
+        "src/hidapi/LICENSE.txt",
+        "src/hidapi/LICENSE-bsd.txt",
+        "src/video/yuv2rgb/LICENSE"
+      ]
+    }
+  },
+  "tools": {
+    "cmake": {
+      "version": "3.31.10",
+      "local_macos_wheel": {
+        "url": "https://files.pythonhosted.org/packages/99/3b/6ed408a99709808df4014bead522e075f0e8d1100e6d886eb5bc30fee04e/cmake-3.31.10-py3-none-macosx_10_10_universal2.whl",
+        "sha256": "ad697643a00d9ba85179590a383c4f7401169b55ebf4b8b2938daf28c6bdeb6d"
+      }
+    },
+    "ninja": {
+      "version": "1.13.0",
+      "local_macos_wheel": {
+        "url": "https://files.pythonhosted.org/packages/3c/74/d02409ed2aa865e051b7edda22ad416a39d81a84980f544f8de717cab133/ninja-1.13.0-py3-none-macosx_10_9_universal2.whl",
+        "sha256": "fa2a8bfc62e31b08f83127d1613d10821775a0eb334197154c4d6067b7068ff1"
+      }
+    }
+  },
+  "build": {
+    "standard": "C++20",
+    "cmake_minimum": "3.25",
+    "python_for_local_tools": "3.12.14",
+    "target": "diagnostic only; not a distributable game",
+    "runtime_linkage": "static; release packaging and LGPL relink/source bundle remain pending"
+  },
+  "licenses": {
+    "mgba": "MPL-2.0",
+    "mgba/blip-buf": "LGPL-2.1-or-later",
+    "mgba/inih": "BSD-3-Clause",
+    "mgba/MurmurHash3": "public-domain",
+    "SDL": "Zlib",
+    "SDL/hidapi": "BSD-3-Clause (selected from upstream alternatives)",
+    "SDL/yuv2rgb": "BSD-3-Clause"
+  },
+  "public_data": "No ROM, Nintendo BIOS, extracted game asset or saved game is embedded."
+}
