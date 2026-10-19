@@ -540,6 +540,16 @@
       "path": "src/title/mode_title.c",
       "size": 12440,
       "sha256": "0fbfe04ec9e0134b008b6371ee6b18ad0e370f5b9c1e1f9e97fef292bae50251"
+    },
+    {
+      "path": "src/evt/event_message.c",
+      "size": 211668,
+      "sha256": "d2ed8c91d0c9a1071e9007bcce1f2d585cf0569683450d1b37203fac75abef92"
+    },
+    {
+      "path": "src/evt/event_index_data.c",
+      "size": 10872,
+      "sha256": "5b16184dc6b44663a5a109909ca59c0262fecccf8c1808eae1154c3b2aa6f7c9"
     }
   ]
 }
