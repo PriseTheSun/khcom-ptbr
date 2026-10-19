@@ -124,7 +124,7 @@ def build_profile(data: bytes, *, fetch: bool = False) -> tuple[bytes, dict, dic
             base = unicodedata.normalize("NFD", character)[0]
             base_index = tables.glyph(tables.single_byte_map[ord(base)])
             x, y = base_index % 16 * 8, base_index // 16 * height
-            base_rows = [original_pixels[(y + row) * width + x:(y + row) * width + x + 8]
+            base_rows = [bytes(original_pixels[(y + row) * width + x:(y + row) * width + x + 8])
                          for row in range(height)]
             generated = generate_accent(character, base_rows, tables.widths[font][base_index])
             index = FIRST_INDEX + i
@@ -167,8 +167,9 @@ def build_profile(data: bytes, *, fetch: bool = False) -> tuple[bytes, dict, dic
         raise KhcomError("credits_profile_extent", "Receita modificou o tamanho ou a cauda da ROM.")
     candidate_tables = CreditTables(tables.pages_and_codes, tables.single_byte_map, tuple(widths))
     font_state = 0
+    by_id = {item["id"]: item for item in original_items}
     for row in audit["rows"]:
-        item = next(item for item in original_items if item["id"] == row["id"])
+        item = by_id[row["id"]]
         span = item["source_span"]
         parsed = parse_line(result[span["start"]:span["end"]], font_state, candidate_tables)
         font_state = parsed["font_after"]
