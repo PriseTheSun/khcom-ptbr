@@ -84,6 +84,22 @@ jobs:
              installer_sha256 = (Get-FileHash $installer.FullName -Algorithm SHA256).Hash.ToLower();
              installer_size = $installer.Length; clean_install_verified = $false } |
             ConvertTo-Json | Set-Content -Encoding utf8 dist/desktop/installer-build.json
+      - name: Install, start, reinstall and uninstall the owned Windows fixture
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $smokeRoot = Join-Path $env:RUNNER_TEMP "KHCoM smoke ação $env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
+          "KHCOM_SMOKE_ROOT=$smokeRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          ./tools/windows_install_smoke.ps1 -Installer ./dist/desktop/KHCoM-PTBR-windows-x64-setup.exe -InstallerBuild ./dist/desktop/installer-build.json -Payload ./dist/desktop/payload -ReportPath ./dist/desktop/windows-install-smoke.json -WorkRoot $smokeRoot
+      - name: Retain Windows fixture evidence, including failures
+        if: always() && runner.os == 'Windows' && env.KHCOM_SMOKE_ROOT != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: windows-installer-smoke-evidence
+          path: ${{ env.KHCOM_SMOKE_ROOT }}
+          if-no-files-found: warn
+          retention-days: 14
+          compression-level: 6
       - name: Audit closed package allowlist
         run: python tools/audit_package.py --package dist/desktop/payload --report dist/desktop/rechecked-audit.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

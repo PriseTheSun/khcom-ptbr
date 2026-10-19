@@ -15,7 +15,7 @@ SOURCE_AREAS = {
     "app": {".cpp", ".hpp"}, "core": {".cpp", ".hpp"},
     "platform": {".cpp", ".hpp", ".txt"}, "cmake": {".cmake"},
     "packaging": {".iss"},
-    "tools": {".py"}, "tests": {".py", ".cpp", ".hpp"},
+    "tools": {".py", ".ps1"}, "tests": {".py", ".cpp", ".hpp"},
     "manifests": {".json"}, "docs": {".md"},
     ".github/workflows": {".yml"},
     ".github": {".yaml"},
