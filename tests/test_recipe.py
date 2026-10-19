@@ -26,7 +26,7 @@ class RecipeTests(unittest.TestCase):
                   "builders": {"source.py": "d" * 64}, "contains_original_payload": False, "full_translation": False}
         validate_recipe(recipe, recipe["builders"])
         for mutation in [lambda r: r.update(command="arbitrary command"), lambda r: r.update(payload="bytes"),
-                         lambda r: r.update(recipe_version=3), lambda r: r.update(full_translation=True),
+                         lambda r: r.update(recipe_version=4), lambda r: r.update(full_translation=True),
                          lambda r: r.update(builders={})]:
             bad = copy.deepcopy(recipe)
             mutation(bad)

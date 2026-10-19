@@ -47,6 +47,14 @@ set(SDL_TEST_LIBRARY OFF CACHE BOOL "" FORCE)
 set(SDL_TESTS OFF CACHE BOOL "" FORCE)
 set(SDL_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(SDL_INSTALL OFF CACHE BOOL "" FORCE)
+# The codeload tag archive has no REVISION.txt. Without this official
+# override SDL's git_describe walks into the containing application's repo.
+string(JSON KHCOM_PINNED_SDL_REVISION GET "${KHCOM_DEPENDENCIES}" sources sdl build_revision)
+string(JSON sdl_version GET "${KHCOM_DEPENDENCIES}" sources sdl version)
+if(NOT KHCOM_PINNED_SDL_REVISION STREQUAL "SDL-${sdl_version}")
+  message(FATAL_ERROR "SDL version/revision manifest mismatch")
+endif()
+set(SDL_REVISION "${KHCOM_PINNED_SDL_REVISION}" CACHE STRING "Pinned archive revision, independent of parent Git" FORCE)
 FetchContent_MakeAvailable(sdl)
 endif()
 

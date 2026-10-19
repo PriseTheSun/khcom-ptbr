@@ -23,14 +23,14 @@ class TextTests(unittest.TestCase):
         cls.owner = load_textgen()
         cls.codecs = cls.owner.load_charmap("us")
 
-    def fixture(self, *, source="Teste áé{HIGHLIGHT}í{PLAIN}\nãç{END}", domains=None):
+    def fixture(self, *, source="Teste áé{HIGHLIGHT}í{PLAIN}\nãç{END}", pool_name="synthetic"):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         directory = Path(temporary.name)
         encoded = self.codecs["game"].encode(source, "synthetic")
         data = b"\xA5" * 32 + encoded + b"\xA5" * 64
-        spec = {"pool": "synthetic", "objects": {"us": {"name": "synthetic.s", "start": ROM_BASE + 32, "end": ROM_BASE + 32 + len(encoded), "encoding": "game", "align": 2, "ctype": "u16"}}, "entries": ["test_string"]}
-        path = directory / "synthetic.yaml"
+        spec = {"pool": pool_name, "objects": {"us": {"name": "synthetic.s", "start": ROM_BASE + 32, "end": ROM_BASE + 32 + len(encoded), "encoding": "game", "align": 2, "ctype": "u16"}}, "entries": ["test_string"]}
+        path = directory / f"{pool_name}.yaml"
         path.write_text(yaml.safe_dump(spec), encoding="utf-8")
         pools = [self.owner.Pool(path)]
         parser = SimpleNamespace(load_charmap=lambda version: self.codecs, load_pools=lambda: pools, decode_unit=self.owner.decode_unit, TextError=self.owner.TextError)
@@ -183,6 +183,17 @@ class TextTests(unittest.TestCase):
         self.assertIn("invisible_editorial_characters", report["diagnostic_counts"])
         issue = next(d for d in report["items"][0]["diagnostics"] if d["code"] == "controls_changed")
         self.assertEqual(issue["actual"], ["END", "END"])
+
+    def test_event_palette_control_cannot_consume_terminator_even_with_same_control_sequence(self):
+        data, parser, _, _ = self.fixture(source="{HIGHLIGHT}Teste{PLAIN}Fim{END}", pool_name="event_text")
+        candidate = extract_catalog(data, parser=parser, check_identity=False)
+        candidate["items"][0]["translation"] = "{HIGHLIGHT}Olá{PLAIN}{END}"
+        report = validate_translations(data, candidate, parser=parser, check_identity=False)
+        self.assertIn("terminal_palette_control", report["diagnostic_counts"])
+        self.assertNotIn("controls_changed", report["diagnostic_counts"])
+        candidate["items"][0]["translation"] = "{HIGHLIGHT}Olá{PLAIN}fim{END}"
+        report = validate_translations(data, candidate, parser=parser, check_identity=False)
+        self.assertNotIn("terminal_palette_control", report["diagnostic_counts"])
 
 
 if __name__ == "__main__":

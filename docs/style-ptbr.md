@@ -5,6 +5,12 @@ marcas e Kingdom Hearts; traduzir todo o restante**. Esta é a autorização par
 essas categorias de exceção, não uma aprovação automática de qualquer frase
 em inglês. Cada ocorrência preservada precisa de justificativa específica.
 
+Decisão adicional explícita em 2026-10-18: traduzir **Chain of Memories** como
+**Corrente de Memórias**, preservando somente **Kingdom Hearts** no título.
+Isso inclui o subtítulo rasterizado no vídeo de abertura, títulos estáticos e
+interface do aplicativo. A aprovação do termo não fecha a edição nem a prova
+visual desses recursos.
+
 ## Aplicação
 
 - Manter nomes de personagens e de pessoas creditadas, marcas, nomes de
@@ -25,6 +31,7 @@ em inglês. Cada ocorrência preservada precisa de justificativa específica.
 
 | Conceito | Proposta editorial | Estado |
 |---|---|---|
+| Chain of Memories | Corrente de Memórias | Termo aprovado pelo proprietário; integração gráfica pendente |
 | save / load | salvar / carregar | Proposta; verificar cada uso |
 | card / deck | carta / baralho | Proposta; verificar cada uso |
 | ability | habilidade | Proposta; verificar cada uso |

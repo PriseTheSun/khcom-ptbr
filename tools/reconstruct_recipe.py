@@ -19,7 +19,7 @@ FIELDS = {"schema_version", "recipe", "recipe_version", "source_sha256", "target
 def validate_recipe(recipe, builders):
     if (not isinstance(recipe, dict) or set(recipe) != FIELDS or recipe.get("schema_version") != 1
             or recipe.get("recipe") != "khcom-ptbr-pilots" or type(recipe.get("recipe_version")) is not int
-            or recipe["recipe_version"] not in (1, 2) or recipe.get("contains_original_payload") is not False
+            or recipe["recipe_version"] not in (1, 2, 3) or recipe.get("contains_original_payload") is not False
             or recipe.get("full_translation") is not False):
         raise KhcomError("recipe_schema", "Receita não pertence ao perfil fixo sem payload.")
     if recipe.get("builders") != builders:

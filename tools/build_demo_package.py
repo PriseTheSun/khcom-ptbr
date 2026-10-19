@@ -11,6 +11,7 @@ from khcom.credits_profile import build_profile
 from khcom.errors import KhcomError
 from khcom.graphic_probe import build_title_probe
 from khcom.rom import read_rom
+from khcom.movies import build_opening_subtitle_probe
 from khcom.relocation_probe import build_verified_relocation_probe
 from khcom.text import build_dialogue_probe, json_bytes, write_private
 from khcom.upstream import PROJECT_ROOT, sha256
@@ -48,19 +49,23 @@ def compose(source: bytes, candidates: list[tuple[str, bytes]]) -> tuple[bytes, 
     return bytes(target), report
 
 
-def reconstruct(source: bytes, *, fetch=False, version=2):
-    if version not in (1, 2):
+def reconstruct(source: bytes, *, fetch=False, version=3):
+    if version not in (1, 2, 3):
         raise KhcomError("recipe_version", "Versão de receita não suportada.")
     dialogue, dialogue_report = build_dialogue_probe(source, fetch=fetch)
     title, title_report = build_title_probe(source)
     fonts, font_report, _atlases = build_profile(source)
     candidates = [("sora-dialogue", dialogue), ("title-prompt", title), ("credits-fonts", fonts)]
     details = {"dialogue": dialogue_report, "title": title_report, "fonts": font_report}
-    if version == 2:
+    if version >= 2:
         riku, riku_report = build_dialogue_probe(source, fetch=fetch, scene="riku-opening")
         menu, menu_report = build_verified_relocation_probe(source)
         candidates.extend([("riku-dialogue", riku), ("save-menu-relocation", menu)])
         details.update(riku=riku_report, menu=menu_report)
+    if version >= 3:
+        opening, opening_report = build_opening_subtitle_probe(source)
+        candidates.append(("opening-subtitles", opening))
+        details["opening"] = opening_report
     candidate, components = compose(source, candidates)
     return candidate, components, details
 
@@ -71,7 +76,7 @@ def main() -> int:
     parser.add_argument("--member")
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument("--fetch-upstream", action="store_true")
-    parser.add_argument("--recipe-version", type=int, choices=[1, 2], default=2)
+    parser.add_argument("--recipe-version", type=int, choices=[1, 2, 3], default=3)
     args = parser.parse_args()
     try:
         destination = args.out.resolve()
@@ -91,7 +96,8 @@ def main() -> int:
                     "patch_file": "translation.bps", "save_compatibility": "B8CE-sram-v1",
                     "distribution_approved": False, "complete_game_coverage": False,
                     "description": ("Piloto: APERTE INICIAR, uma fala de Sora e fontes de créditos. "
-                                    + ("Inclui uma fala de Riku e Salvar jogo?/Sim/Não. " if args.recipe_version == 2 else "")
+                                    + ("Inclui uma fala de Riku e Salvar jogo?/Sim/Não. " if args.recipe_version >= 2 else "")
+                                    + ("Três legendas da abertura traduzidas. " if args.recipe_version >= 3 else "")
                                     + "A maior parte do jogo permanece em inglês."),
                     "components": components}
         destination.mkdir(parents=True, exist_ok=False)

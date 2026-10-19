@@ -56,33 +56,50 @@ struct SDLResources {
   }
 };
 struct Browser {
-  bool visible = false;
+  struct Entry {
+    fs::path path;
+    bool directory;
+  };
+  struct Listing {
+    std::vector<Entry> entries;
+    std::string error;
+    bool truncated = false;
+  };
+  bool visible = false, loading = false;
   int purpose = 0;
   fs::path directory;
-  std::vector<fs::directory_entry> entries;
-  std::string error;
-  bool truncated = false;
+  Listing current;
+  std::future<Listing> pending;
   void refresh() {
-    entries.clear();
-    error.clear();
-    truncated = false;
-    try {
-      for (auto &e : fs::directory_iterator(directory)) {
-        if (entries.size() == 1024) {
-          truncated = true;
-          break;
+    if (loading)
+      return;
+    loading = true;
+    current = {};
+    pending = std::async(std::launch::async, [where = directory] {
+      Listing result;
+      try {
+        for (auto &e : fs::directory_iterator(where)) {
+          if (result.entries.size() == 1024) {
+            result.truncated = true;
+            break;
+          }
+          if (e.is_symlink())
+            continue;
+          bool dir = e.is_directory();
+          if (dir || e.is_regular_file())
+            result.entries.push_back({e.path(), dir});
         }
-        if (!e.is_symlink() && (e.is_directory() || e.is_regular_file()))
-          entries.push_back(e);
+        std::sort(result.entries.begin(), result.entries.end(),
+                  [](const Entry &a, const Entry &b) {
+                    if (a.directory != b.directory)
+                      return a.directory > b.directory;
+                    return a.path.filename() < b.path.filename();
+                  });
+      } catch (const std::exception &e) {
+        result.error = e.what();
       }
-      std::sort(entries.begin(), entries.end(), [](auto &a, auto &b) {
-        if (a.is_directory() != b.is_directory())
-          return a.is_directory() > b.is_directory();
-        return a.path().filename() < b.path().filename();
-      });
-    } catch (const std::exception &e) {
-      error = e.what();
-    }
+      return result;
+    });
   }
   void open(int type) {
     purpose = type;
@@ -94,6 +111,11 @@ struct Browser {
     refresh();
   }
   std::optional<fs::path> draw() {
+    if (loading && pending.wait_for(std::chrono::seconds(0)) ==
+                       std::future_status::ready) {
+      current = pending.get();
+      loading = false;
+    }
     if (!visible)
       return {};
     std::optional<fs::path> result;
@@ -105,18 +127,20 @@ struct Browser {
     if (ImGui::BeginPopupModal("Selecionar arquivo", nullptr,
                                ImGuiWindowFlags_NoSavedSettings)) {
       ImGui::TextWrapped("%s", utf8(directory).c_str());
+      ImGui::BeginDisabled(loading);
       if (ImGui::Button("Pasta anterior") && directory.has_parent_path()) {
         directory = directory.parent_path();
         refresh();
       }
       ImGui::SameLine();
       if (ImGui::Button("Downloads")) {
-        auto p = SDL_GetUserFolder(SDL_FOLDER_DOWNLOADS);
+        auto *p = SDL_GetUserFolder(SDL_FOLDER_DOWNLOADS);
         if (p) {
           directory = from_utf8(p);
           refresh();
         }
       }
+      ImGui::EndDisabled();
       ImGui::SameLine();
       if (ImGui::Button("Cancelar")) {
         visible = false;
@@ -127,30 +151,33 @@ struct Browser {
                 : purpose == 1
                     ? "Escolha o manifest.json do pacote de tradução local."
                     : "Escolha um save .khcs exportado pelo aplicativo.");
-      if (!error.empty())
-        ImGui::TextWrapped("%s", error.c_str());
-      if (truncated)
+      if (loading)
+        ImGui::TextWrapped("Lendo pasta… Se o sistema pedir permissão, "
+                           "responda ao diálogo para concluir a leitura.");
+      if (!current.error.empty())
+        ImGui::TextWrapped("%s", current.error.c_str());
+      if (current.truncated)
         ImGui::TextWrapped("Pasta com mais de 1.024 entradas; use uma subpasta "
                            "para localizar o arquivo.");
       ImGui::BeginChild("arquivos", ImVec2(0, 0), ImGuiChildFlags_Borders);
-      for (auto &e : entries) {
-        auto ext = e.path().extension().string();
+      for (const auto &e : current.entries) {
+        auto ext = e.path.extension().string();
         std::transform(ext.begin(), ext.end(), ext.begin(),
                        [](unsigned char c) { return std::tolower(c); });
-        bool dir = e.is_directory();
-        bool allowed = dir || (purpose == 0   ? (ext == ".gba" || ext == ".zip")
-                               : purpose == 1 ? ext == ".json"
-                                              : ext == ".khcs");
+        bool allowed =
+            e.directory || (purpose == 0   ? (ext == ".gba" || ext == ".zip")
+                            : purpose == 1 ? ext == ".json"
+                                           : ext == ".khcs");
         if (!allowed)
           continue;
-        auto label = (dir ? "[Pasta] " : "") + utf8(e.path().filename());
+        auto label = (e.directory ? "[Pasta] " : "") + utf8(e.path.filename());
         if (ImGui::Selectable(label.c_str())) {
-          if (dir) {
-            directory = e.path();
+          if (e.directory) {
+            directory = e.path;
             refresh();
             break;
           }
-          result = e.path();
+          result = e.path;
           visible = false;
           ImGui::CloseCurrentPopup();
           break;
@@ -161,6 +188,10 @@ struct Browser {
     }
     return result;
   }
+};
+struct CancelTaskOnExit {
+  std::atomic<bool> &cancel;
+  ~CancelTaskOnExit() { cancel = true; }
 };
 const char *gba_names[] = {"A",        "B",    "Select", "Start", "Direita",
                            "Esquerda", "Cima", "Baixo",  "R",     "L"};
@@ -290,7 +321,7 @@ int main(int argc, char **argv) try {
     message = "Há temporários preservados; consulte Dados > Tentar limpeza "
               "novamente.";
   s.window = SDL_CreateWindow(
-      "Kingdom Hearts: Chain of Memories · PT-BR experimental", 960, 640,
+      "Kingdom Hearts: Corrente de Memórias · PT-BR experimental", 960, 640,
       SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY |
           ((options.headless || options.hidden) ? SDL_WINDOW_HIDDEN : 0));
   if (!s.window)
@@ -351,24 +382,26 @@ int main(int argc, char **argv) try {
                 ". Use Áudio > Reconectar.";
   };
   open_audio();
-  std::string shader_diagnostic;
+  std::string shader_diagnostic, video_warning;
   s.crt = CrtShader::create(s.renderer, shader_diagnostic);
   auto apply_video = [&]() {
+    video_warning.clear();
     if (config.filter == 2 && !s.crt) {
       config.filter = 0;
-      message = shader_diagnostic + " Fallback: pixels nítidos.";
+      video_warning = shader_diagnostic + " Fallback: pixels nítidos.";
     }
     if (!SDL_SetRenderVSync(s.renderer, config.vsync ? 1 : 0)) {
       config.vsync = false;
-      message = "Vsync indisponível neste backend; a velocidade do jogo "
-                "continua controlada pelo relógio GBA.";
+      video_warning +=
+          " Vsync indisponível neste backend; a velocidade do jogo "
+          "continua controlada pelo relógio GBA.";
     }
     SDL_SetTextureScaleMode(s.texture, config.filter == 1
                                            ? SDL_SCALEMODE_LINEAR
                                            : SDL_SCALEMODE_NEAREST);
     if (!SDL_SetWindowFullscreen(s.window, config.fullscreen)) {
       config.fullscreen = false;
-      message = SDL_GetError();
+      video_warning += SDL_GetError();
     }
   };
   apply_video();
@@ -415,9 +448,13 @@ int main(int argc, char **argv) try {
   int remap = -1;
   bool remap_pad = false;
   int session_profile = config.profile;
-  std::future<Result<Installed>> job;
   std::atomic<bool> cancel = false;
   std::atomic<InstallPhase> install_phase = InstallPhase::validation;
+  // Futures join before their cancellation/progress owners are destroyed.
+  std::future<Result<Installed>> job;
+  std::future<Result<RomImport>> import_job;
+  CancelTaskOnExit cancel_on_exit{cancel};
+  bool importing = false;
   bool busy = false, quit_after_job = false;
   double saved_at = 0, active_elapsed = 0;
   unsigned presented = 0;
@@ -441,19 +478,23 @@ int main(int argc, char **argv) try {
     save_failed = false;
     return true;
   };
-  auto activate = [&](Installed installed, bool flush_current = true) {
+  auto activate = [&](Installed installed, bool flush_current = true,
+                      int next_profile = -1) {
     if (flush_current && session && !flush_save())
       return;
+    const int selected_profile =
+        next_profile < 0 ? config.profile : next_profile;
     auto save =
-        take(load_save(options.data, installed.manifest, config.profile));
+        take(load_save(options.data, installed.manifest, selected_profile));
     auto next = take(Session::create(std::move(installed.bytes), save));
     session = std::move(next);
     manifest = std::move(installed.manifest);
-    session_profile = config.profile;
+    config.profile = selected_profile;
+    session_profile = selected_profile;
     clock = FrameClock(session->seconds_per_frame());
     if (s.audio)
       SDL_ClearAudioStream(s.audio);
-    menu = false;
+    menu = !video_warning.empty() && !options.hidden && !options.headless;
     message = "Pacote carregado. Tradução experimental/parcial; a maior parte "
               "do jogo ainda está em inglês.";
   };
@@ -472,15 +513,17 @@ int main(int argc, char **argv) try {
               "permanece disponível.";
   };
   auto select_rom = [&](const fs::path &p, int member = -1) {
-    auto imported = take(import_rom(p, member));
+    if (busy)
+      return;
     original_path = p;
-    zip_choices = std::move(imported.choices);
-    if (!imported.bytes.empty()) {
-      original = std::move(imported.bytes);
-      message = "ROM USA original reconhecida.";
-      if (!package_path.empty())
-        start_install();
-    }
+    cancel = false;
+    busy = true;
+    importing = true;
+    menu = true;
+    import_job = std::async(std::launch::async,
+                            [p, member] { return import_rom(p, member); });
+    message = "Lendo a ROM local. Se o sistema pedir acesso à pasta, responda "
+              "ao diálogo para concluir ou cancelar.";
   };
   if (!original_path.empty())
     select_rom(original_path);
@@ -581,7 +624,28 @@ int main(int argc, char **argv) try {
         }
       }
     }
-    if (busy &&
+    if (busy && importing &&
+        import_job.wait_for(std::chrono::seconds(0)) ==
+            std::future_status::ready) {
+      auto result = import_job.get();
+      busy = false;
+      importing = false;
+      if (cancel) {
+        message = "Importação cancelada após o término da leitura do sistema.";
+      } else if (auto *e = std::get_if<Error>(&result)) {
+        message = e->message;
+      } else {
+        auto imported = std::move(std::get<RomImport>(result));
+        zip_choices = std::move(imported.choices);
+        if (!imported.bytes.empty()) {
+          original = std::move(imported.bytes);
+          message = "ROM USA original reconhecida.";
+          if (!package_path.empty() && !quit_after_job)
+            start_install();
+        }
+      }
+    }
+    if (busy && !importing &&
         job.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
       auto result = job.get();
       busy = false;
@@ -609,7 +673,6 @@ int main(int argc, char **argv) try {
     if (!paused && elapsed <= .25)
       active_elapsed += elapsed;
     auto due = clock.due(elapsed, paused);
-    max_due = std::max(max_due, int(due));
     auto *keys = SDL_GetKeyboardState(nullptr);
     std::uint16_t mask = 0;
     if (!paused) {
@@ -635,6 +698,7 @@ int main(int argc, char **argv) try {
     }
     if (options.frames)
       due = std::min<std::uint64_t>(due, options.frames - core_frames);
+    unsigned advanced = 0;
     for (unsigned n = 0; n < due; ++n) {
       auto r = session->advance(mask);
       if (auto *e = std::get_if<Error>(&r)) {
@@ -643,6 +707,7 @@ int main(int argc, char **argv) try {
         break;
       }
       ++core_frames;
+      ++advanced;
       if (s.audio && audio_ok) {
         auto samples = session->audio_frame();
         int queued = SDL_GetAudioStreamQueued(s.audio);
@@ -661,6 +726,7 @@ int main(int argc, char **argv) try {
         audio_bytes += samples.size_bytes();
       }
     }
+    max_due = std::max(max_due, int(advanced));
     if (paused && s.audio)
       SDL_ClearAudioStream(s.audio);
     if (session && wall - saved_at >= 5) {
@@ -678,7 +744,7 @@ int main(int argc, char **argv) try {
       SDL_FRect rect{float(vp.x), float(vp.y), float(vp.width),
                      float(vp.height)};
       if (config.filter == 2 && s.crt && !s.crt->enable()) {
-        message = "Falha no shader: " + std::string(SDL_GetError());
+        video_warning = "Falha no shader: " + std::string(SDL_GetError());
         config.filter = 0;
       }
       SDL_RenderTexture(s.renderer, s.texture, nullptr, &rect);
@@ -696,7 +762,7 @@ int main(int argc, char **argv) try {
       ImGui::SetNextWindowSize(ImVec2(std::min(790.f, display.x - 16),
                                       std::min(580.f, display.y - 16)),
                                ImGuiCond_Always);
-      ImGui::Begin("Chain of Memories · PT-BR", nullptr,
+      ImGui::Begin("Kingdom Hearts: Corrente de Memórias · PT-BR", nullptr,
                    ImGuiWindowFlags_NoCollapse |
                        ImGuiWindowFlags_NoSavedSettings);
       ImGui::TextColored(ImVec4(.45f, .8f, 1, 1),
@@ -705,6 +771,12 @@ int main(int argc, char **argv) try {
                          "ou botão Guia abre este menu.");
       if (!message.empty())
         ImGui::TextWrapped("%s", message.c_str());
+      if (!video_warning.empty()) {
+        ImGui::PushTextWrapPos(0);
+        ImGui::TextColored(ImVec4(1, .75f, .35f, 1), "%s",
+                           video_warning.c_str());
+        ImGui::PopTextWrapPos();
+      }
       if (!vp.fits)
         ImGui::TextColored(ImVec4(1, .7f, .3f, 1),
                            "A escala não cabe na área física. Selecione "
@@ -713,7 +785,8 @@ int main(int argc, char **argv) try {
         const char *phases[] = {
             "Validando ROM original…", "Verificando pacote BPS…",
             "Preparando cache local…", "Ativando pacote…", "Concluído"};
-        ImGui::TextUnformatted(phases[int(install_phase.load())]);
+        ImGui::TextUnformatted(importing ? "Lendo arquivo local…"
+                                         : phases[int(install_phase.load())]);
         if (ImGui::Button("Cancelar operação"))
           cancel = true;
       }
@@ -856,16 +929,15 @@ int main(int argc, char **argv) try {
           int profile = config.profile;
           const char *profiles[] = {"Perfil 1", "Perfil 2", "Perfil 3"};
           if (ImGui::Combo("Perfil", &profile, profiles, 3)) {
-            if (flush_save()) {
-              config.profile = profile;
+            try {
+              if (session) {
+                activate(take(load_active(options.data)), true, profile);
+                menu = true;
+              } else
+                config.profile = profile;
               save_options();
-              if (session)
-                try {
-                  activate(take(load_active(options.data)));
-                  menu = true;
-                } catch (const std::exception &e) {
-                  message = e.what();
-                }
+            } catch (const std::exception &e) {
+              message = e.what();
             }
           }
           if (session) {
@@ -949,8 +1021,8 @@ int main(int argc, char **argv) try {
               "A ROM é fornecida por você e permanece intacta. A tradução é "
               "aplicada localmente por BPS. Não há download de ROM, BIOS ou "
               "dados do jogo. Multiplayer ainda não está disponível.");
-          ImGui::Text("Core mGBA %s | SDL %d", Session::core_version(),
-                      SDL_GetVersion());
+          ImGui::Text("Core mGBA %s | %s", Session::core_version(),
+                      SDL_GetRevision());
           ImGui::TextWrapped(
               "Interface: Dear ImGui(MIT), JSON(MIT), miniz(MIT), Droid "
               "Sans(Apache2.0). Avisos completos acompanham a distribuição.");
@@ -1021,8 +1093,12 @@ int main(int argc, char **argv) try {
     SDL_Delay(config.vsync ? 1 : 2);
   }
   cancel = true;
-  if (busy)
-    job.wait();
+  if (busy) {
+    if (importing)
+      import_job.wait();
+    else
+      job.wait();
+  }
   flush_save();
   save_options();
   if (!options.capture.empty() && session) {
@@ -1039,6 +1115,7 @@ int main(int argc, char **argv) try {
     Json report = {
         {"schema_version", 1},
         {"core_version", Session::core_version()},
+        {"sdl_revision", SDL_GetRevision()},
         {"simulated_frames", core_frames},
         {"presented_frames", presented},
         {"elapsed_seconds",
@@ -1056,6 +1133,7 @@ int main(int argc, char **argv) try {
         {"renderer", SDL_GetRendererName(s.renderer)},
         {"shader_available", bool(s.crt)},
         {"selected_filter", config.filter},
+        {"video_warning", video_warning},
         {"active_wall_seconds", active_elapsed},
         {"simulated_seconds", core_frames * clock.period()},
         {"audio_nonzero_samples", session ? session->audio().nonzero : 0},

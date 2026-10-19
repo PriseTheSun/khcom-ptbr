@@ -5,7 +5,9 @@
 #include <iostream>
 #include <miniz.h>
 #ifdef _WIN32
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <windows.h>
 #else
 #include <signal.h>

@@ -59,8 +59,12 @@ A fonte possui 45 glifos, maiúsculas/minúsculas compartilham índices, e acent
 não são mapeados. A análise dessa função indica ainda que um caractere sem
 caso mantém o índice anterior, portanto não existe fallback de acentos seguro.
 Precisamos adicionar mapeamento/glifos e testar seus consumidores, ou escolher
-outro renderer explicitamente para cada tela. A fonte `background_small`
-permanece sem mapeamento semântico estabelecido.
+outro renderer se uma superfície lexical precisar deles. A investigação
+[do executável matching](font-runtime-coverage.md) identificou esses atlas
+compactos nas rotas de debug/contadores e wrappers sem chamadas; os menus
+normais observados usam a fonte latina. Não se amplia o atlas de debug para
+declarar um menu normal localizado. A fonte `background_small` permanece
+sem um consumidor lexical ativo comprovado.
 
 Na origem dos créditos, o catálogo textual usa CP932, enquanto o renderer
 possui suas próprias páginas e códigos. Essas tabelas e seus consumidores foram
@@ -68,8 +72,8 @@ verificados em [credits.md](credits.md) e [credits-consumers.md](credits-consume
 O [perfil PT-BR](credits-profile.md) reconstrói 24 glifos em cada uma das duas
 fontes a partir das bases da ROM local. A candidata reproduz os pixels do
 [piloto V2](credits-pilot.md), que verificou 96 ocorrências em Sora/Riku.
-A fonte de oito pixels continua experimental, e a integração de traduções ao
-roteiro ainda depende dos contratos por ocorrência; CP932 não foi redefinido.
+A fonte de oito pixels continua experimental. A integração de candidatas ao
+roteiro usa os [contratos por ocorrência](validation.md); CP932 não foi redefinido.
 
 ## Pilotos e limites concretos
 
@@ -115,6 +119,11 @@ referências para o
 interior de strings, o resto das falas, ambas as campanhas ou cobertura 100%.
 A reinserção geral continua bloqueada. Uma aprovação de renderer deve ser
 anexada à sua fonte/consumidor/caixa e à revisão testada, sem virar uma flag global.
+
+Os ensaios posteriores acrescentam [uma fala de Riku](riku-dialogue-probe.md)
+e [24 acentos normais/destacados](font-runtime-coverage.md), com traces e
+comparação de pixels. Os resultados delimitados não tornam todas as caixas
+automaticamente editáveis.
 
 ## Verificação automática
 

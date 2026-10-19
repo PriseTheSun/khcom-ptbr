@@ -8,13 +8,7 @@
 #include <miniz.h>
 #include <set>
 #include <system_error>
-#ifdef _WIN32
-#define NOMINMAX
-#include <windows.h>
-#else
-#include <fcntl.h>
-#include <unistd.h>
-#endif
+
 namespace khcom::desktop {
 namespace {
 struct Failed : std::runtime_error {

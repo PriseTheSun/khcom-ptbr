@@ -33,7 +33,7 @@ def provenance(literals, components):
                 names.add(name)
         if covered != end - start:
             raise KhcomError("literal_owner", "Literal sem produtor exato.", target_start=start)
-        permitted = names <= {"sora-dialogue", "riku-dialogue", "save-menu-relocation"}
+        permitted = names <= {"sora-dialogue", "riku-dialogue", "save-menu-relocation", "opening-subtitles"}
         result.append({**literal, "components": sorted(names),
                        "provenance": "authored-translation-encoding" if permitted else "local-rom-derived-composition",
                        "public_literal_approved": permitted})
@@ -47,7 +47,7 @@ def main():
     parser.add_argument("--patch", required=True, type=Path)
     parser.add_argument("--recipe-out", required=True, type=Path)
     parser.add_argument("--report", required=True, type=Path)
-    parser.add_argument("--recipe-version", type=int, choices=[1, 2], default=2)
+    parser.add_argument("--recipe-version", type=int, choices=[1, 2, 3], default=3)
     args = parser.parse_args()
     try:
         source = read_rom(args.rom, member=args.member).data

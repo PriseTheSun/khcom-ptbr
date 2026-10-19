@@ -22,7 +22,9 @@
         "src/hidapi/LICENSE.txt",
         "src/hidapi/LICENSE-bsd.txt",
         "src/video/yuv2rgb/LICENSE"
-      ]
+      ],
+      "build_revision": "SDL-3.4.18",
+      "revision_strategy": "Official SDL_REVISION CMake cache override before FetchContent; archive hash remains authoritative and parent Git history is never used."
     },
     "imgui": {
       "version": "v1.91.9b",

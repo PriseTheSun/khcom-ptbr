@@ -84,6 +84,15 @@ def plan_translations(data: bytes, catalog: dict, *, profile_id: str | None = No
             # in editorial text is an END in the game, not an ordinary letter.
             candidate_tokens = tokenize(codec.decode(encoded), codec)
             candidate_controls = [token["name"] for token in candidate_tokens if token["kind"] != "text"]
+            if original["domain"] == "event_text" and original["codec_id"] == "game":
+                # LayoutMsgGlyphsPage consumes a palette marker and then
+                # processes the next unit in the same iteration. A marker
+                # immediately before END renders glyph 0 and skips END.
+                for index, token in enumerate(candidate_tokens):
+                    if (token.get("name") == "END" and index
+                            and candidate_tokens[index - 1].get("name") in ("HIGHLIGHT", "PLAIN")):
+                        diagnostics.append({"code": "terminal_palette_control", "token_index": index - 1,
+                                            "message": "O renderer de evento consome o terminador após um controle de paleta; mantenha texto entre eles."})
             if candidate_controls != source_controls:
                 diagnostics.append({"code": "controls_changed", "expected": source_controls, "actual": candidate_controls,
                                     "message": "Comandos, quebras e terminadores codificados divergem da origem."})
