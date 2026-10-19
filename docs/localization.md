@@ -1,12 +1,14 @@
 # Pipeline de localização: estado verificável
 
 Esta etapa implementa inventário textual e edição de catálogos. **Não produz
-tradução jogável nem comprova cobertura integral.** A reinserção disponível
-recodifica textos sem edição e conserva os demais bytes; alterações editoriais
-são bloqueadas enquanto faltarem fontes, métricas, caixas e referências
-validadas. Não existe flag para ignorar essas verificações. A exceção experimental
-é uma única fala fixa em `probe_dialogue.py`, descrita em [fonts.md](fonts.md),
-que produz candidata privada para validação em runtime, sem aprovação de release.
+tradução jogável nem comprova cobertura integral.** A reinserção sem edição
+conserva todos os bytes. O [perfil de créditos](credits-profile.md) permite
+candidatas em posição fixa com contratos por ocorrência; alterações editoriais
+sem fontes, métricas, caixas e referências validadas continuam bloqueadas.
+Não existe flag para ignorar essas verificações. Uma única fala fixa em
+`probe_dialogue.py`, descrita em [fonts.md](fonts.md), também produz candidata
+experimental privada de Sora; o [piloto de Riku](riku-dialogue-probe.md) usa
+`--scene riku-opening`. Ambos selecionam receitas fixas, sem aprovação de release.
 
 ## Fontes e propriedade dos formatos
 
@@ -93,7 +95,7 @@ Importação preserva a origem e normaliza somente a entrada editorial para NFC.
 `translation_input` retém a entrada antes da normalização. Alterar uma tradução
 invalida revisão/evidências anteriores e retorna o item a `draft`. Importar um
 CSV não é aprovação de encoding, texto, fonte ou layout. Uma tradução editada
-ainda não pode ser reinserida por esta etapa do pipeline.
+precisa do [contrato do consumidor](validation.md) antes de ser reinserida.
 
 JSON/CSV aceitam somente arquivos regulares, lidos com detecção de mudança,
 até 64 MiB. O limite de 16.384 itens e de 128 Ki caracteres por campo textual
@@ -177,5 +179,5 @@ implementação anterior. É uma amostra local, não orçamento universal.
   exigem verificação em seus produtores/consumidores e no jogo.
 - Gráficos/vídeos e texto fora desses pools não são extraídos por esta etapa.
 - A ROM já tem 32 MiB; não é permitido assumir espaço livre nem anexar dados.
-- Tradução contextual, reinserção editada, realocação, QA visual e campanhas
+- Tradução contextual, expansão dos contratos de reinserção, realocação, QA visual e campanhas
   permanecem pendentes. Passar no round-trip não fecha esses marcos.

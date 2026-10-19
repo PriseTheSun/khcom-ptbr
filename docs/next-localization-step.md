@@ -10,13 +10,13 @@ em Quick Save e foram retomados com a ROM original, conforme `menu-probe.md`.
 O fluxo diagnóstico dos créditos Sora/Riku passou pela inicialização original
 e pela rolagem, com 388 desenhos por variante, conforme `credits-mode-entry.md`.
 `credits-consumers.md` amplia a busca estática ao corpus completo de 750 fontes
-e delimita um piloto US de reuso dos índices 210–233. A fonte de oito pixels
-continua exigindo desenho e verificação próprios para os acentos.
-Isso avança os passos 1–3 abaixo, sem fechar o perfil acentuado de créditos,
-reuso de índices/realocação nem as provas dos outros renderizadores.
+e delimita um piloto US de reuso dos índices 210–233. O piloto V2 confirmou
+96 ocorrências nas duas fontes e variantes. `credits-profile.md` descreve a
+receita pública que reproduz seus 48 glifos a partir da ROM local. O perfil
+permanece experimental, sem liberar a reinserção geral ou outros renderizadores.
 
-O próximo trabalho é fechar o piloto de créditos,
-antes de ampliar qualquer atlas. Não surgiu necessidade de mudar a arquitetura
+O próximo trabalho é completar as outras superfícies da prova vertical e seus
+contratos de edição. Não surgiu necessidade de mudar a arquitetura
 libmgba + SDL + BPS nem de pedir uma decisão nova ao usuário. Os detalhes abaixo
 são investigação técnica executável dentro de M1/M2, não dependências externas.
 
@@ -195,20 +195,16 @@ A aquisição dos produtores, o menu de baralhos, o parser dos créditos e a
 investigação de seus consumidores já têm resultados delimitados nos documentos
 citados acima. Não precisam ser repetidos sem mudança de fonte ou nova evidência.
 
-1. **Fechar o piloto privado de créditos PT-BR.** Mapear os 24 códigos aos
-   glifos/métricas dos dois estilos, revalidar o conjunto usado original e
-   limitar o reuso aos índices 210–233. Comparar a candidata contra a ROM
-   original por spans, comandos, largura e execução. Os 1.200 bytes são as
-   quatro regiões reutilizadas; expansão/realocação continua sendo outra prova.
-2. **Consolidar o perfil no pipeline somente após a prova.** Acrescentar codec,
-   tabela e receita reprodutíveis com testes próprios, sem incluir bitmaps
-   derivados nem liberar o codec para outros domínios. A revisão tipográfica
-   de 8px precisa acompanhar capturas 1x e ampliadas, sombra e destaque.
-3. **Completar as outras superfícies da prova vertical.** Continuam pendentes
+1. **Completar as outras superfícies da prova vertical.** Continuam pendentes
    diálogo Riku, identificação dos menus compactos, gráficos/consumidores não
    cobertos pelo aviso do título e inventário audiovisual. A prova Sora de uma
    fala, o nome de baralho e o aviso gráfico não substituem esses casos.
-4. **Fechar limites e referências antes da tradução em massa.** Integrar
+2. **Integrar os contratos de edição dos créditos.** O codec, a `.tbl` e a
+   receita já existem e reproduzem o piloto V2. Falta ligar tradução, controles,
+   bytes, métricas e referências por ocorrência à reinserção, preservando o
+   catálogo original. A revisão tipográfica de 8px deve considerar 1x, ampliação,
+   sombra e destaque; a igualdade de pixels não encerra essa revisão.
+3. **Fechar limites e referências antes da tradução em massa.** Integrar
    métricas por caixa e valores dinâmicos, resolver referências/aliases e
    demonstrar a realocação necessária sem sobrescrever proprietários conhecidos
    nem ampliar o cartucho além de 32 MiB. Manter cada incógnita explícita.

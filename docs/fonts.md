@@ -62,10 +62,14 @@ Precisamos adicionar mapeamento/glifos e testar seus consumidores, ou escolher
 outro renderer explicitamente para cada tela. A fonte `background_small`
 permanece sem mapeamento semântico estabelecido.
 
-Nos créditos, o parser textual usa CP932. Esse codec não representa os acentos
-PT-BR requeridos; a mera existência de 524 glifos e larguras não resolve isso.
-As páginas/códigos e o consumidor dos créditos ainda precisam ser mapeados para
-definir novos códigos, glifos e métricas, mantendo os comandos do script.
+Na origem dos créditos, o catálogo textual usa CP932, enquanto o renderer
+possui suas próprias páginas e códigos. Essas tabelas e seus consumidores foram
+verificados em [credits.md](credits.md) e [credits-consumers.md](credits-consumers.md).
+O [perfil PT-BR](credits-profile.md) reconstrói 24 glifos em cada uma das duas
+fontes a partir das bases da ROM local. A candidata reproduz os pixels do
+[piloto V2](credits-pilot.md), que verificou 96 ocorrências em Sora/Riku.
+A fonte de oito pixels continua experimental, e a integração de traduções ao
+roteiro ainda depende dos contratos por ocorrência; CP932 não foi redefinido.
 
 ## Pilotos e limites concretos
 

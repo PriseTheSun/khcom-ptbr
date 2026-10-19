@@ -10,6 +10,7 @@ from khcom.rom import read_rom
 from khcom.text import json_bytes, read_catalog, write_private
 from khcom.upstream import load_textgen
 from khcom.validation import validate_translations
+from khcom.credits_profile import PROFILE_ID
 
 
 def main():
@@ -19,12 +20,15 @@ def main():
     ap.add_argument("--catalog", required=True, type=Path)
     ap.add_argument("--out", required=True, type=Path)
     ap.add_argument("--fetch-upstream", action="store_true")
+    ap.add_argument("--profile", choices=[PROFILE_ID])
+    ap.add_argument("--matching-tree", type=Path, help="Árvore de build matching para revalidar referências do perfil")
     args = ap.parse_args()
     try:
         if args.out.exists() or args.out.is_symlink():
             raise KhcomError("output_exists", "Escolha um relatório novo.")
         rom = read_rom(args.rom, member=args.member)
-        report = validate_translations(rom.data, read_catalog(args.catalog), parser=load_textgen(fetch=args.fetch_upstream))
+        report = validate_translations(rom.data, read_catalog(args.catalog), parser=load_textgen(fetch=args.fetch_upstream),
+                                       profile_id=args.profile, matching_tree=args.matching_tree, rom_identity=rom.identity)
         report["input"] = rom.identity["input"]
         report["catalog_path"] = str(args.catalog.absolute())
         write_private(args.out, json_bytes(report))

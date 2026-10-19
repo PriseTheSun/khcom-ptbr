@@ -1,0 +1,383 @@
+{
+  "schema": "khcom-fixed-menu-relocation-v1",
+  "rom_sha256": "6f6e7b61bb7b6ef7e2bea6e9dd01e70570a715835cc3713abe86186fd2c4e28d",
+  "candidate_sha256": "2dbd71ae676e745d7a9bdb9080fa23b682a0c7f3ca23b2b3f26b2e2cdacef54e",
+  "upstream_commit": "5dc49b75068bfe24e07bdaf365570d64682680c3",
+  "elf": {
+    "size": 34704718,
+    "sha256": "6498bbaaed4b0e944def1ad55fc1e40a3d719b648f99e4f13f72d4167353e2ec"
+  },
+  "map": {
+    "size": 2736287,
+    "sha256": "ed31aa2201de1705566d447ec6cf6bbf1e3fb0322d56972836f0090995c722f9"
+  },
+  "objects": [
+    {
+      "size": 23044,
+      "sha256": "b3be8b79ec02afb63bdb97d418dc512951d215a6fd163a41ca79cf8799e953a5",
+      "owner": "build/us/gen/common_text.o"
+    },
+    {
+      "size": 7024,
+      "sha256": "069649aed26fd247f243763199cdd8351e20c27f802bf4afed4f94d6467ba313",
+      "owner": "build/us/src/card_deck_equip.o"
+    },
+    {
+      "size": 20860,
+      "sha256": "f14160683ca18c477f248ba77fa086245908f26a3224d5d89c6ca6a7a0664588",
+      "owner": "build/us/src/card_msgwin.o"
+    },
+    {
+      "size": 9832,
+      "sha256": "3604ff4964db912c99a443b3f33846e2db5e3c53d9d7ac901819df54a56680eb",
+      "owner": "build/us/src/card_sysmsgwin.o"
+    },
+    {
+      "size": 94000,
+      "sha256": "7ddc13e2ec8d9d68171216981385562bba832c35bc9fe9d31106542a4584779e",
+      "owner": "build/us/src/event_message.o"
+    },
+    {
+      "size": 87920,
+      "sha256": "602c217b09b4928329ca77a33b58d84e454f61ada35b57a8c01e8177266c49f3",
+      "owner": "build/us/src/map.o"
+    },
+    {
+      "size": 22192,
+      "sha256": "1663b3953b1c6751ee3a81ea2152f5d4cad99713f40c9dcb44c7b4f1be0ba5bd",
+      "owner": "build/us/src/mode_mapinspect.o"
+    },
+    {
+      "size": 23508,
+      "sha256": "c02be65edafa80c4fe3df0b3d7ebf96e918fccc55500d62a3687f9b0df0810bc",
+      "owner": "build/us/src/ms_charge.o"
+    }
+  ],
+  "symbols": [
+    {
+      "name": "gMapSaveConfirmText",
+      "address": 135634416,
+      "size": 32,
+      "type": "STT_OBJECT",
+      "binding": "STB_GLOBAL"
+    },
+    {
+      "name": "gNoChoiceText",
+      "address": 135634456,
+      "size": 6,
+      "type": "STT_OBJECT",
+      "binding": "STB_GLOBAL"
+    },
+    {
+      "name": "gYesChoiceText",
+      "address": 135634448,
+      "size": 8,
+      "type": "STT_OBJECT",
+      "binding": "STB_GLOBAL"
+    }
+  ],
+  "relocations": [
+    {
+      "symbol": "gYesChoiceText",
+      "source_offset": 475644,
+      "target_offset": 1416720,
+      "target_address": 135634448,
+      "symbol_address": 135634448,
+      "addend": 0,
+      "thumb_function": false,
+      "kind": "R_ARM_ABS32",
+      "owner": "build/us/src/event_message.o",
+      "source_section": ".text",
+      "source_section_offset": 28360
+    },
+    {
+      "symbol": "gNoChoiceText",
+      "source_offset": 475648,
+      "target_offset": 1416728,
+      "target_address": 135634456,
+      "symbol_address": 135634456,
+      "addend": 0,
+      "thumb_function": false,
+      "kind": "R_ARM_ABS32",
+      "owner": "build/us/src/event_message.o",
+      "source_section": ".text",
+      "source_section_offset": 28364
+    },
+    {
+      "symbol": "gYesChoiceText",
+      "source_offset": 667792,
+      "target_offset": 1416720,
+      "target_address": 135634448,
+      "symbol_address": 135634448,
+      "addend": 0,
+      "thumb_function": false,
+      "kind": "R_ARM_ABS32",
+      "owner": "build/us/src/card_deck_equip.o",
+      "source_section": ".text",
+      "source_section_offset": 2124
+    },
+    {
+      "symbol": "gNoChoiceText",
+      "source_offset": 667796,
+      "target_offset": 1416728,
+      "target_address": 135634456,
+      "symbol_address": 135634456,
+      "addend": 0,
+      "thumb_function": false,
+      "kind": "R_ARM_ABS32",
+      "owner": "build/us/src/card_deck_equip.o",
+      "source_section": ".text",
+      "source_section_offset": 2128
+    },
+    {
+      "symbol": "gYesChoiceText",
+      "source_offset": 668192,
+      "target_offset": 1416720,
+      "target_address": 135634448,
+      "symbol_address": 135634448,
+      "addend": 0,
+      "thumb_function": false,
+      "kind": "R_ARM_ABS32",
+      "owner": "build/us/src/card_deck_equip.o",
+      "source_section": ".text",
+      "source_section_offset": 2524
+    },
+    {
+      "symbol": "gNoChoiceText",
+      "source_offset": 668196,
+      "target_offset": 1416728,
+      "target_address": 135634456,
+      "symbol_address": 135634456,
+      "addend": 0,
+      "thumb_function": false,
+      "kind": "R_ARM_ABS32",
+      "owner": "build/us/src/card_deck_equip.o",
+      "source_section": ".text",
+      "source_section_offset": 2528
+    },
+    {
+      "symbol": "gYesChoiceText",
+      "source_offset": 671168,
+      "target_offset": 1416720,
+      "target_address": 135634448,
+      "symbol_address": 135634448,
+      "addend": 0,
+      "thumb_function": false,
+      "kind": "R_ARM_ABS32",
+      "owner": "build/us/src/card_msgwin.o",
+      "source_section": ".text",
+      "source_section_offset": 2556
+    },
+    {
+      "symbol": "gNoChoiceText",
+      "source_offset": 671172,
+      "target_offset": 1416728,
+      "target_address": 135634456,
+      "symbol_address": 135634456,
+      "addend": 0,
+      "thumb_function": false,
+      "kind": "R_ARM_ABS32",
+      "owner": "build/us/src/card_msgwin.o",
+      "source_section": ".text",
+      "source_section_offset": 2560
+    },
+    {
+      "symbol": "gYesChoiceText",
+      "source_offset": 674040,
+      "target_offset": 1416720,
+      "target_address": 135634448,
+      "symbol_address": 135634448,
+      "addend": 0,
+      "thumb_function": false,
+      "kind": "R_ARM_ABS32",
+      "owner": "build/us/src/card_sysmsgwin.o",
+      "source_section": ".text",
+      "source_section_offset": 1516
+    },
+    {
+      "symbol": "gNoChoiceText",
+      "source_offset": 674048,
+      "target_offset": 1416728,
+      "target_address": 135634456,
+      "symbol_address": 135634456,
+      "addend": 0,
+      "thumb_function": false,
+      "kind": "R_ARM_ABS32",
+      "owner": "build/us/src/card_sysmsgwin.o",
+      "source_section": ".text",
+      "source_section_offset": 1524
+    },
+    {
+      "symbol": "gYesChoiceText",
+      "source_offset": 676152,
+      "target_offset": 1416720,
+      "target_address": 135634448,
+      "symbol_address": 135634448,
+      "addend": 0,
+      "thumb_function": false,
+      "kind": "R_ARM_ABS32",
+      "owner": "build/us/src/card_sysmsgwin.o",
+      "source_section": ".text",
+      "source_section_offset": 3628
+    },
+    {
+      "symbol": "gNoChoiceText",
+      "source_offset": 676160,
+      "target_offset": 1416728,
+      "target_address": 135634456,
+      "symbol_address": 135634456,
+      "addend": 0,
+      "thumb_function": false,
+      "kind": "R_ARM_ABS32",
+      "owner": "build/us/src/card_sysmsgwin.o",
+      "source_section": ".text",
+      "source_section_offset": 3636
+    },
+    {
+      "symbol": "gYesChoiceText",
+      "source_offset": 971532,
+      "target_offset": 1416720,
+      "target_address": 135634448,
+      "symbol_address": 135634448,
+      "addend": 0,
+      "thumb_function": false,
+      "kind": "R_ARM_ABS32",
+      "owner": "build/us/src/map.o",
+      "source_section": ".text",
+      "source_section_offset": 31232
+    },
+    {
+      "symbol": "gNoChoiceText",
+      "source_offset": 971536,
+      "target_offset": 1416728,
+      "target_address": 135634456,
+      "symbol_address": 135634456,
+      "addend": 0,
+      "thumb_function": false,
+      "kind": "R_ARM_ABS32",
+      "owner": "build/us/src/map.o",
+      "source_section": ".text",
+      "source_section_offset": 31236
+    },
+    {
+      "symbol": "gMapSaveConfirmText",
+      "source_offset": 977648,
+      "target_offset": 1416688,
+      "target_address": 135634416,
+      "symbol_address": 135634416,
+      "addend": 0,
+      "thumb_function": false,
+      "kind": "R_ARM_ABS32",
+      "owner": "build/us/src/map.o",
+      "source_section": ".text",
+      "source_section_offset": 37348
+    },
+    {
+      "symbol": "gYesChoiceText",
+      "source_offset": 977652,
+      "target_offset": 1416720,
+      "target_address": 135634448,
+      "symbol_address": 135634448,
+      "addend": 0,
+      "thumb_function": false,
+      "kind": "R_ARM_ABS32",
+      "owner": "build/us/src/map.o",
+      "source_section": ".text",
+      "source_section_offset": 37352
+    },
+    {
+      "symbol": "gNoChoiceText",
+      "source_offset": 977656,
+      "target_offset": 1416728,
+      "target_address": 135634456,
+      "symbol_address": 135634456,
+      "addend": 0,
+      "thumb_function": false,
+      "kind": "R_ARM_ABS32",
+      "owner": "build/us/src/map.o",
+      "source_section": ".text",
+      "source_section_offset": 37356
+    },
+    {
+      "symbol": "gYesChoiceText",
+      "source_offset": 1076752,
+      "target_offset": 1416720,
+      "target_address": 135634448,
+      "symbol_address": 135634448,
+      "addend": 0,
+      "thumb_function": false,
+      "kind": "R_ARM_ABS32",
+      "owner": "build/us/src/ms_charge.o",
+      "source_section": ".text",
+      "source_section_offset": 9100
+    },
+    {
+      "symbol": "gNoChoiceText",
+      "source_offset": 1076768,
+      "target_offset": 1416728,
+      "target_address": 135634456,
+      "symbol_address": 135634456,
+      "addend": 0,
+      "thumb_function": false,
+      "kind": "R_ARM_ABS32",
+      "owner": "build/us/src/ms_charge.o",
+      "source_section": ".text",
+      "source_section_offset": 9116
+    },
+    {
+      "symbol": "gYesChoiceText",
+      "source_offset": 1085852,
+      "target_offset": 1416720,
+      "target_address": 135634448,
+      "symbol_address": 135634448,
+      "addend": 0,
+      "thumb_function": false,
+      "kind": "R_ARM_ABS32",
+      "owner": "build/us/src/mode_mapinspect.o",
+      "source_section": ".text",
+      "source_section_offset": 8304
+    },
+    {
+      "symbol": "gNoChoiceText",
+      "source_offset": 1085868,
+      "target_offset": 1416728,
+      "target_address": 135634456,
+      "symbol_address": 135634456,
+      "addend": 0,
+      "thumb_function": false,
+      "kind": "R_ARM_ABS32",
+      "owner": "build/us/src/mode_mapinspect.o",
+      "source_section": ".text",
+      "source_section_offset": 8320
+    }
+  ],
+  "ram": [
+    {
+      "section": ".iwram",
+      "address": 50331648,
+      "static_reserved": 30072,
+      "capacity": 32768,
+      "remaining_unassigned": 2696,
+      "runtime_high_water": null
+    },
+    {
+      "section": ".ewram",
+      "address": 33554432,
+      "static_reserved": 253792,
+      "capacity": 262144,
+      "remaining_unassigned": 8352,
+      "runtime_high_water": null
+    }
+  ],
+  "evidence": {
+    "baseline_matching": true,
+    "complete_objects_audited": 524,
+    "abs32_edges_audited": 98607,
+    "independent_relink_sha256": "2dbd71ae676e745d7a9bdb9080fa23b682a0c7f3ca23b2b3f26b2e2cdacef54e",
+    "all_byte_pointer_scan_unknown_count": 0,
+    "changed_rom_bytes": 40,
+    "remaining_unaffected_symbols_preserved": true,
+    "runtime_save_menu_frame": 78000
+  },
+  "scope": "Frozen diagnostic recipe for this original US ROM only, not a general relocation authorization."
+}

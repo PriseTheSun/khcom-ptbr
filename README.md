@@ -19,6 +19,7 @@ em `docs/implementation.md` separa resultados executados e pendências.
 - Piloto gráfico APERTE INICIAR, preservando os cinco quadros do aviso original.
 - Prova dos 24 acentos em nomes de baralhos, com Quick Save e retomada.
 - Auditoria do roteiro de créditos, fontes, códigos e limites de bytes/largura.
+- Reconstrução local de acentos nas duas fontes de créditos, equivalente ao piloto Sora/Riku.
 - Mapa conjunto de textos e 11.347 recursos, com referências desconhecidas explícitas.
 - Extração e reconstrução idêntica de 4.900 recursos gráficos declarados.
 - Diagnóstico de candidatos textuais por ID, com bloqueios explícitos de layout/referências.
@@ -78,6 +79,7 @@ Leia [localização](docs/localization.md) para CSV, `.tbl` e round-trip;
 [gráficos](docs/graphics.md) para extração sem perda de tiles, paletas e animações;
 [piloto do título](docs/title-graphic-probe.md) e [baralhos](docs/menu-probe.md) para provas delimitadas;
 [créditos](docs/credits.md) para a auditoria de roteiro e largura;
+[perfil PT-BR dos créditos](docs/credits-profile.md) para reconstruir fontes e exportar sua tabela;
 [mapa de recursos](docs/asset-map.md) para ocupação e referências pendentes.
 
 ## Verificação pública, sem ROM

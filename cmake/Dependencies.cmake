@@ -1,6 +1,13 @@
 include(FetchContent)
 file(READ "${CMAKE_CURRENT_LIST_DIR}/../manifests/runtime-deps.json" KHCOM_DEPENDENCIES)
-foreach(dependency mgba sdl)
+set(KHCOM_SELECTED_DEPS mgba json miniz)
+if(KHCOM_BUILD_DESKTOP OR KHCOM_BUILD_DIAGNOSTIC)
+  list(APPEND KHCOM_SELECTED_DEPS sdl)
+endif()
+if(KHCOM_BUILD_DESKTOP)
+  list(APPEND KHCOM_SELECTED_DEPS imgui)
+endif()
+foreach(dependency IN LISTS KHCOM_SELECTED_DEPS)
   string(JSON dep_url GET "${KHCOM_DEPENDENCIES}" sources ${dependency} url)
   string(JSON dep_hash GET "${KHCOM_DEPENDENCIES}" sources ${dependency} sha256)
   string(JSON dep_archive GET "${KHCOM_DEPENDENCIES}" sources ${dependency} archive)
@@ -33,6 +40,7 @@ endforeach()
 FetchContent_MakeAvailable(mgba)
 string(JSON KHCOM_PINNED_CORE_VERSION GET "${KHCOM_DEPENDENCIES}" sources mgba version)
 
+if(KHCOM_BUILD_DESKTOP OR KHCOM_BUILD_DIAGNOSTIC)
 set(SDL_SHARED OFF CACHE BOOL "" FORCE)
 set(SDL_STATIC ON CACHE BOOL "" FORCE)
 set(SDL_TEST_LIBRARY OFF CACHE BOOL "" FORCE)
@@ -40,12 +48,36 @@ set(SDL_TESTS OFF CACHE BOOL "" FORCE)
 set(SDL_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(SDL_INSTALL OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(sdl)
+endif()
+
+# Portable patch/storage model dependencies. They contain no game resources.
+set(JSON_BuildTests OFF CACHE BOOL "" FORCE)
+set(JSON_Install OFF CACHE BOOL "" FORCE)
+set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(json miniz)
+if(KHCOM_BUILD_DESKTOP)
+FetchContent_MakeAvailable(imgui)
+add_library(khcom_imgui STATIC
+  "${imgui_SOURCE_DIR}/imgui.cpp" "${imgui_SOURCE_DIR}/imgui_draw.cpp"
+  "${imgui_SOURCE_DIR}/imgui_tables.cpp" "${imgui_SOURCE_DIR}/imgui_widgets.cpp"
+  "${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp"
+  "${imgui_SOURCE_DIR}/backends/imgui_impl_sdlrenderer3.cpp")
+target_include_directories(khcom_imgui PUBLIC "${imgui_SOURCE_DIR}" "${imgui_SOURCE_DIR}/backends")
+target_link_libraries(khcom_imgui PUBLIC SDL3::SDL3-static)
+# Embed only the freely licensed application font, never assets from the ROM.
+file(READ "${imgui_SOURCE_DIR}/misc/fonts/DroidSans.ttf" font_hex HEX)
+string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," font_bytes "${font_hex}")
+file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/generated")
+file(WRITE "${CMAKE_BINARY_DIR}/generated/ui_font.hpp" "#pragma once\ninline unsigned char khcom_ui_font[] = {${font_bytes}};\n")
+
+endif()
 
 # Retain the selected upstream license texts beside diagnostic builds. Release
 # packaging must additionally ship corresponding sources/relink materials.
 set(notices "${CMAKE_BINARY_DIR}/third-party-notices.txt")
 file(WRITE "${notices}" "KHCoM diagnostic dependencies; not a release compliance bundle.\n")
-foreach(dependency mgba sdl)
+foreach(dependency IN LISTS KHCOM_SELECTED_DEPS)
   string(JSON version GET "${KHCOM_DEPENDENCIES}" sources ${dependency} version)
   string(JSON count LENGTH "${KHCOM_DEPENDENCIES}" sources ${dependency} license_files)
   math(EXPR last "${count}-1")
@@ -57,3 +89,11 @@ foreach(dependency mgba sdl)
 endforeach()
 file(APPEND "${notices}" "\nmGBA src/util/hash.c: MurmurHash3 was written by Austin Appleby and placed in the public domain.\n")
 file(APPEND "${notices}" "\nLocal build-only modification: cmake/PatchMgbaVersion.cmake forwards SKIP_GIT=ON to mGBA's version-info generator; emulation sources are unchanged.\n")
+
+if(KHCOM_BUILD_DESKTOP)
+file(READ "${CMAKE_CURRENT_LIST_DIR}/../platform/licenses/DroidSans-Apache-2.0.txt" font_license)
+file(APPEND "${notices}" "\nDroid Sans by Steve Matteson, Apache-2.0:\n${font_license}\n")
+
+file(APPEND "${notices}" "\nCRT shader: SDL testgpurender_effects_CRT, from pinned SDL source (Zlib); original Lightweight CRT Effect by pxlforge, CC0-1.0, https://godotshaders.com/shader/lightweight-crt-effect/ . Source and compiled MSL/SPIR-V/DXIL variants are in the corresponding SDL source bundle.\n")
+
+endif()

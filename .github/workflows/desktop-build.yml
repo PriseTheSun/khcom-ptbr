@@ -1,4 +1,4 @@
-name: Desktop diagnostic build (not a release)
+name: Desktop experimental packages (no game data)
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: diagnostic-${{ github.ref }}
+  group: desktop-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -20,19 +20,23 @@ jobs:
         include:
           - os: windows-2022
             machine: AMD64
+            artifact: windows-x64
           - os: macos-15
             machine: arm64
+            artifact: macos-arm64
           - os: macos-15-intel
             machine: x86_64
+            artifact: macos-x86_64
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
-          python-version: '3.12.14'
+          # 3.12.14 has no macOS/Windows artifact; Python is build tooling only.
+          python-version: '3.12.10'
       - name: Record and assert runner architecture
         env:
           EXPECTED_MACHINE: ${{ matrix.machine }}
@@ -48,9 +52,74 @@ jobs:
         env:
           TARGET_MACHINE: ${{ matrix.machine }}
         run: cmake -S . -B build-ci -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="$TARGET_MACHINE"
-      - name: Compile diagnostic and authored core fixture
+      - name: Compile desktop and authored fixtures
         run: cmake --build build-ci --config Release --parallel 4
-      - name: Run synthetic core contracts
+      - name: Run core and desktop contracts (no commercial ROM)
         run: ctest --test-dir build-ci -C Release --output-on-failure
-      # Binaries stay on this ephemeral runner. Release packaging, license/source
-      # bundles, universal .app, installers and private game QA remain open gates.
+      - name: Package macOS with source, notices and SBOM
+        if: runner.os == 'macOS'
+        run: python tools/package_desktop.py --binary build-ci/khcom-desktop --build build-ci --platform macos --out dist/desktop --fetch-deps
+      - name: Package Windows with source, notices and SBOM
+        if: runner.os == 'Windows'
+        run: python tools/package_desktop.py --binary build-ci/Release/khcom-desktop.exe --build build-ci --platform windows --out dist/desktop --fetch-deps
+      - name: Build per-user Windows installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $compiler = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $compiler)) { throw "Inno Setup ausente" }
+          $version = (Get-Item $compiler).VersionInfo.FileVersion
+          if ($version -notmatch '^6\.7\.1(?:\.|$)') { throw "Inno Setup inesperado: $version" }
+          & $compiler "/DPayload=$pwd/dist/desktop/payload" "/DOutput=$pwd/dist/desktop" packaging/windows.iss
+          if ($LASTEXITCODE -ne 0) { throw "Falha no instalador" }
+          Get-FileHash dist/desktop/*setup.exe -Algorithm SHA256
+      - name: Audit closed package allowlist
+        run: python tools/audit_package.py --package dist/desktop/payload --report dist/desktop/rechecked-audit.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: desktop-${{ matrix.artifact }}
+          path: |
+            dist/desktop/*.zip
+            dist/desktop/*.exe
+            dist/desktop/*.json
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+  universal:
+    needs: build
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.12.10'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: desktop-macos-*
+          path: inputs
+      - name: Audit each input and assemble universal executable
+        run: |
+          python -m zipfile -e inputs/desktop-macos-arm64/KHCoM-PTBR-macos-arm64-experimental.zip inputs/arm64
+          python -m zipfile -e inputs/desktop-macos-x86_64/KHCoM-PTBR-macos-x86_64-experimental.zip inputs/x86_64
+          python tools/audit_package.py --package inputs/arm64
+          python tools/audit_package.py --package inputs/x86_64
+          cmp inputs/arm64/corresponding-source.zip inputs/x86_64/corresponding-source.zip
+          mkdir build-universal
+          lipo -create "inputs/arm64/KHCoM PT-BR.app/Contents/MacOS/khcom-desktop" "inputs/x86_64/KHCoM PT-BR.app/Contents/MacOS/khcom-desktop" -output build-universal/khcom-desktop
+          chmod +x build-universal/khcom-desktop
+          cp "inputs/arm64/KHCoM PT-BR.app/Contents/Resources/third-party-notices.txt" build-universal/third-party-notices.txt
+          python tools/package_desktop.py --binary build-universal/khcom-desktop --build build-universal --platform macos --out dist/universal --fetch-deps
+          "dist/universal/payload/KHCoM PT-BR.app/Contents/MacOS/khcom-desktop" --help
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: desktop-macos-universal
+          path: |
+            dist/universal/*.zip
+            dist/universal/*.json
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0

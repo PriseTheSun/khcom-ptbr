@@ -1,6 +1,6 @@
 # Piloto privado de acentos nos créditos US
 
-A candidata V2 executou as duas variantes de créditos pelo inicializador real e exibiu as 24 formas `á é í ó ú â ê ô ã õ ç à Á É Í Ó Ú Â Ê Ô Ã Õ Ç À` nas duas fontes. A comparação dos pixels nativos confirmou **96 ocorrências de glifos, 5.984 pixels e zero diferenças** nas quatro linhas capturadas de Sora e Riku. É um experimento privado: a receita e o perfil de codificação continuam em `private/`, sem integração no editor público, tradução dos créditos ou aprovação de tipografia final.
+A candidata V2 executou as duas variantes de créditos pelo inicializador real e exibiu as 24 formas `á é í ó ú â ê ô ã õ ç à Á É Í Ó Ú Â Ê Ô Ã Õ Ç À` nas duas fontes. A comparação dos pixels nativos confirmou **96 ocorrências de glifos, 5.984 pixels e zero diferenças** nas quatro linhas capturadas de Sora e Riku. É um experimento privado, sem tradução dos créditos ou aprovação de tipografia final. Posteriormente, a receita foi incorporada à ferramenta de preparação descrita em [credits-profile.md](credits-profile.md), com equivalência binária comprovada; os auxiliares e resultados históricos deste piloto foram preservados.
 
 ## Identidade e alterações delimitadas
 

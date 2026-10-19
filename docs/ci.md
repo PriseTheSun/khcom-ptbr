@@ -1,59 +1,72 @@
-# CI de fontes e diagnóstico
+# CI de fontes, builds e QA privado
 
-Os workflows estão em `.github/workflows/` **dentro do subprojeto**. O staging
-preserva esse caminho para quando o projeto ocupar a raiz de seu próprio
-repositório. Eles não foram instalados na CI do REA. Esta árvore local não tem
-remoto do jogo selecionado; nenhuma execução GitHub foi iniciada.
+Os workflows estão na raiz do repositório do jogo, em `.github/workflows/`.
+O remoto é `PriseTheSun/khcom-ptbr`; o REA não recebe esses jobs.
 
-## Workflows implementados
+## Execuções observadas
 
-`ci.yml` obtém fontes de formato fixadas e verificadas, compila Floating IPS no
-commit do manifesto, executa a suite Python com fixtures próprias e verifica
-staging. Não carrega uma ROM comercial. `desktop-build.yml` compila o diagnóstico
-e executa CTest em Windows x64/MSVC, macOS arm64 e macOS Intel. As arquiteturas
-dos hosts são verificadas explicitamente antes do build.
+No commit `a4ca832464e59f5096dc3447cfbd147aaa966c15`, o run público
+[39180402142](https://github.com/PriseTheSun/khcom-ptbr/actions/runs/39180402142)
+passou nos testes de fontes. O run desktop
+[39180402200](https://github.com/PriseTheSun/khcom-ptbr/actions/runs/39180402200)
+falhou nos três runners durante setup-python: Python 3.12.14 não tem os artefatos
+Windows/macOS solicitados. O log Windows confirma a ausência do x64; o manifesto
+oficial python-versions confirma que 3.12.10 oferece as três combinações usadas.
+O workflow desktop foi corrigido para **3.12.10**. Python é ferramenta de build,
+não dependência do executável. A execução Ubuntu mantém 3.12.14, que passou.
 
-As actions de checkout e Python estão fixadas por commit. A instalação Python
-e CMake/Ninja usa versões fixadas; os wheels PyYAML/CMake/Ninja têm hashes.
-mGBA/SDL vêm do manifesto existente, com verificação SHA-256 pelo CMake.
-Os labels dos runners fixam a família do sistema, **não uma imagem imutável**;
-os compiladores/SDK provisionados ainda variam e aparecem nos logs de configure.
-Isso não é uma alegação de builds bit a bit reproduzíveis.
+Esses resultados pertencem ao commit antigo. A implementação local nova só
+pode ser chamada de CI verificada depois de seu próprio run. Relatórios com
+identidade e logs relevantes permanecem em `private/reports/github-ci-v1.json`.
 
-Os jobs usam runners hospedados efêmeros, `contents: read`, checkout sem retenção
-de credencial, nenhum secret, cache ou upload. Executam PRs no contexto
-`pull_request`; não usam `pull_request_target`. Binários de diagnóstico ficam
-apenas no runner enquanto o pacote de licenças/fontes/relink não estiver pronto.
-Não há publicação, instalador ou assinatura nessas rotinas.
+## Workflows
 
-Os SHAs foram resolvidos nos repositórios oficiais de
-[checkout](https://github.com/actions/checkout/tree/3d3c42e5aac5ba805825da76410c181273ba90b1)
-e [setup-python](https://github.com/actions/setup-python/tree/5fda3b95a4ea91299a34e894583c3862153e4b97).
-Os labels de arquitetura foram conferidos na
-[lista de imagens de runners](https://github.com/actions/runner-images).
+- `ci.yml`: parsers fixados, Floating IPS independente, testes Python com
+  fixtures próprias e staging sem jogo comercial.
+- `desktop-build.yml`: CMake/CTest Windows x64, macOS arm64 e macOS x86_64,
+  empacotamento com fontes/licenças/SBOM, instalador Inno Setup por usuário e
+  montagem de `.app` universal a partir das duas slices. Artefatos são previews
+  experimentais, não releases assinadas nem tradução completa.
+- `private-game-qa.yml`: somente `workflow_dispatch` em `main` no repositório
+  esperado, ambiente protegido `private-game-qa` e runner com label dedicado
+  `khcom-private-ephemeral`. Faz smoke de 180 frames com a ROM/pacote fornecidos
+  localmente pelo proprietário. Só JSON de campos permitidos é enviado; dumps,
+  saves, imagens e logs detalhados ficam no armazenamento privado do runner.
+- `release.yml`: valida origem/commit/run privado e exige o contrato completo
+  de `validate_release.py`. O smoke atual não produz um `release-candidate`;
+  assinatura, QA completo, aprovação humana e publicação permanecem abertos.
 
-## Verificação executada localmente
+Configure o runner privado como descartável e exclusivo dessa rotina, com
+`KHCOM_QA_ROM`, `KHCOM_QA_PACKAGE` e `KHCOM_PRIVATE_QA_DIR` no ambiente preparado
+pelo proprietário. A pasta privada deve existir fora do checkout. Não use esse
+runner para PRs públicos. O workflow não instala ferramenta global nem transfere
+ROM por secret/artefato. A existência do YAML não significa que o runner ou as
+proteções do ambiente estejam provisionados.
 
-Actionlint 1.7.12 validou ambos os workflows. O binário local foi conferido contra
-o checksum publicado do release; proveniência em
-`private/reports/actionlint-tool.json`. ShellCheck e Pyflakes não foram
-executados por essa chamada. Validação estática não substitui uma execução do
-workflow, especialmente a primeira compilação Windows/MSVC.
+As actions estão fixadas por commit. PyYAML, pyelftools, CMake e Ninja têm versões
+com hashes; as dependências C++ têm arquivos/hash fixados. O instalador exige
+Inno Setup 6.7.1 já presente na imagem Windows, em vez de baixar uma versão
+flutuante. Labels de runner fixam a família, não uma imagem imutável: SDK e
+compilador precisam permanecer registrados nos logs e no manifesto final.
 
-O build macOS x86_64 terminou com AppleClang/SDK presentes na máquina arm64.
-CTest passou 2/2 **via Rosetta**, registrado em
-`private/reports/core-version-x86-ctest.log`. `lipo` produziu
-`build-universal-v4/khcom-diagnostic`, contendo x86_64 e arm64, e `--help` passou
-com seleção explícita de cada slice. O artefato é uma ferramenta CLI local,
-sem bundle `.app`, assinatura Developer ID ou notarização. Isso não comprova
-QA em um Mac Intel físico nem nas versões mínimas propostas do macOS.
-`core-version.md` descreve a correção do gerador de versão da dependência e
-os binários históricos preservados.
+Os jobs públicos usam `contents: read`, checkout sem retenção de credencial e
+runners hospedados efêmeros. Não há `pull_request_target`, cache de dados privados
+ou secrets de assinatura. O upload é restrito aos caminhos de saída do
+empacotador auditado. O job universal reaudita os pacotes de entrada e exige
+fontes correspondentes iguais antes de combinar as slices.
 
-## Gates ainda abertos
+## Verificação local
 
-As tarefas 6.1–6.11 permanecem abertas conforme seu checklist: execução real
-da CI, frontend final, pacotes/instaladores, auditoria de composição por
-plataforma, QA privado por digest, bundle universal completo, assinatura e
-notarização, atualização e release reproduzível. A existência destes workflows
-não fecha o marco de distribuição.
+Actionlint 1.7.12 validou os quatro workflows, com o label privado declarado em
+`.github/actionlint.yaml`. A suite Python executou 135 testes, sem skips, no
+registro `private/reports/python-tests-v9.log`; isso é o snapshot dessa execução,
+não um substituto para os testes posteriores a novas alterações.
+
+O smoke privado foi executado localmente com V2: 180 frames, origem preservada,
+SHA de destino correto, relatório sanitizado sem caminhos de ROM/save/captura.
+Usou dispositivos SDL dummy, portanto não comprova áudio físico nem QA completo.
+A execução no runner privado GitHub continua indisponível até provisionamento.
+
+`distribution.md` explica o empacotamento e os gates. As provas anteriores do
+harness universal via Rosetta ficam em `core-version.md`; não comprovam Mac
+Intel físico nem substituem o teste do aplicativo novo.

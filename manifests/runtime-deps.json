@@ -23,6 +23,34 @@
         "src/hidapi/LICENSE-bsd.txt",
         "src/video/yuv2rgb/LICENSE"
       ]
+    },
+    "imgui": {
+      "version": "v1.91.9b",
+      "url": "https://codeload.github.com/ocornut/imgui/tar.gz/refs/tags/v1.91.9b",
+      "archive": "imgui-v1.91.9b.tar.gz",
+      "sha256": "8e1bbc76c71d74fef2fb85db7e7ca8eba13d6a86623c54992b60162db554ffdb",
+      "license_files": [
+        "LICENSE.txt",
+        "docs/FONTS.md"
+      ]
+    },
+    "json": {
+      "version": "v3.12.0",
+      "url": "https://codeload.github.com/nlohmann/json/tar.gz/refs/tags/v3.12.0",
+      "archive": "json-v3.12.0.tar.gz",
+      "sha256": "4b92eb0c06d10683f7447ce9406cb97cd4b453be18d7279320f7b2f025c10187",
+      "license_files": [
+        "LICENSE.MIT"
+      ]
+    },
+    "miniz": {
+      "version": "3.0.2",
+      "url": "https://codeload.github.com/richgel999/miniz/tar.gz/refs/tags/3.0.2",
+      "archive": "miniz-3.0.2.tar.gz",
+      "sha256": "c4b4c25a4eb81883448ff8924e6dba95c800094a198dc9ce66a292ac2ef8e018",
+      "license_files": [
+        "LICENSE"
+      ]
     }
   },
   "tools": {
@@ -45,7 +73,7 @@
     "standard": "C++20",
     "cmake_minimum": "3.25",
     "python_for_local_tools": "3.12.14",
-    "target": "diagnostic only; not a distributable game",
+    "target": "desktop application and diagnostic harness; release QA and packaging gates remain separate",
     "runtime_linkage": "static; release packaging and LGPL relink/source bundle remain pending"
   },
   "licenses": {
@@ -55,7 +83,38 @@
     "mgba/MurmurHash3": "public-domain",
     "SDL": "Zlib",
     "SDL/hidapi": "BSD-3-Clause (selected from upstream alternatives)",
-    "SDL/yuv2rgb": "BSD-3-Clause"
+    "SDL/yuv2rgb": "BSD-3-Clause",
+    "Dear ImGui": "MIT",
+    "Droid Sans UI font": "Apache-2.0",
+    "nlohmann/json": "MIT",
+    "miniz": "MIT",
+    "SDL/CRT shader origin": "CC0-1.0"
   },
-  "public_data": "No ROM, Nintendo BIOS, extracted game asset or saved game is embedded."
+  "public_data": "No ROM, Nintendo BIOS, extracted game asset or saved game is embedded.",
+  "ui_font": {
+    "name": "Droid Sans",
+    "source": "imgui/misc/fonts/DroidSans.ttf",
+    "sha256": "4e2371bc0e4cf6983342e150412f140da79d674c9be0b56458401f581072ecd3",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0.txt",
+    "license_sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "license_file": "platform/licenses/DroidSans-Apache-2.0.txt"
+  },
+  "shader": {
+    "name": "SDL test CRT effect",
+    "origin": "https://godotshaders.com/shader/lightweight-crt-effect/",
+    "author": "pxlforge",
+    "origin_license": "CC0-1.0",
+    "integration_license": "Zlib",
+    "formats": [
+      "MSL",
+      "SPIR-V",
+      "DXIL"
+    ],
+    "source_files": {
+      "test/testgpurender_effects_CRT.frag.hlsl": "76b1a06b87a8c07a753c725f9c1c714725880dce5c440305a9ffde76dfd165ce",
+      "test/testgpurender_effects_CRT.frag.msl.h": "60894252111e54787d07809b93ee53387aaf8b9030ca7fbfa79dfc559a83f4db",
+      "test/testgpurender_effects_CRT.frag.spv.h": "424e02fe9269b144f6ffaeaa138d9ec6311aea8cecbd55b6c67e8678cd6ba30c",
+      "test/testgpurender_effects_CRT.frag.dxil.h": "b5052db2c9d4fffad6a4ce1a5154a2797ed85b0998640eaf84f62e6abde41f3f"
+    }
+  }
 }

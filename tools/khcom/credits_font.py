@@ -27,21 +27,9 @@ def _generate8(character, base_rows, base_advance):
     Values 0/1/2/3 retain background/foreground/shadow/edge semantics. The
     caller owns encoding, original-glyph identity and the actual width table.
     """
-    if not isinstance(character, str) or character not in REQUIRED or len(character) != 1:
-        raise KhcomError("credits_recipe", "exactly one required NFC accented character is needed")
-    decomposed = unicodedata.normalize("NFD", character)
-    if len(decomposed) != 2 or decomposed[1] not in MARKS:
-        raise KhcomError("credits_recipe", "unsupported accent decomposition")
-    base, mark = decomposed[0], MARKS[decomposed[1]]
-    if type(base_advance) is not int or not 3 <= base_advance <= 8:
-        raise KhcomError("credits_recipe", "base advance must be an explicit supported width 3..8")
-    if len(base_rows) != 8 or any(len(row) != 8 for row in base_rows):
-        raise KhcomError("credits_recipe", "base glyph must be 8x8")
-    if any(type(value) is not int or value not in range(4) for row in base_rows for value in row):
-        raise KhcomError("credits_recipe", "base glyph contains non-2bpp values")
+    base, accent = unicodedata.normalize("NFD", character)
+    mark = MARKS[accent]
     original = [list(row) for row in base_rows]
-    if any(value for row in original for value in row[base_advance:]):
-        raise KhcomError("credits_recipe", "base glyph has pixels outside its declared draw width")
     result = [[0] * 8 for _ in range(8)]
     advance = max(base_advance, 5) if mark == "tilde" else base_advance
     row_map = []
@@ -151,39 +139,50 @@ def _generate8(character, base_rows, base_advance):
 
 
 def _generate16(character, base_rows):
-    base,mark=unicodedata.normalize('NFD',character)
-    rows=[list(r) for r in base_rows]
-    edits=[]
-    if base=='i':
-        for y in (3,4):
-            for x in range(8):rows[y][x]=0
-        edits.append('Removed original i dot at rows 3/4, preserving stem and baseline.')
-    if mark=='\u0327':
-        # The existing C/c descender space has two unused rows below shadow.
-        foreground={(3,14),(2,15)}
-        edits.append('Cedilla tail occupies rows 14/15 below preserved C/c; lower shadow cannot extend past cell and is intentionally omitted.')
+    base, mark = unicodedata.normalize("NFD", character)
+    rows = [list(row) for row in base_rows]
+    edits = []
+    if base == "i":
+        for y in (3, 4):
+            rows[y] = [0] * 8
+        edits.append("Removed the original i dot at rows 3/4, preserving stem and baseline.")
+    if mark == "\u0327":
+        foreground = {(3, 14), (2, 15)}
+        edits.append("Cedilla uses rows 14/15 below preserved C/c; shadow below the cell is omitted.")
     else:
-        y=0 if base.isupper() else 3
-        center=2 if base in 'AEIOUaeou' else 1
-        if mark=='\u0301':foreground={(center+1,y),(center,y+1)}
-        elif mark=='\u0300':foreground={(center-1,y),(center,y+1)}
-        elif mark=='\u0302':foreground={(center,y),(center-1,y+1),(center+1,y+1)}
-        elif mark=='\u0303':foreground={(center-1,y),(center+1,y),(center-2,y+1),(center,y+1)}
-        else:raise KhcomError("credits_recipe", "Acento não suportado.", character=character)
-        edits.append('Accent uses two foreground rows plus right/down shadow in the blank space above the original base.')
-    for x,y in foreground:
+        y = 0 if base.isupper() else 3
+        center = 2 if base in "AEIOUaeou" else 1
+        if mark == "\u0301":
+            foreground = {(center + 1, y), (center, y + 1)}
+        elif mark == "\u0300":
+            foreground = {(center - 1, y), (center, y + 1)}
+        elif mark == "\u0302":
+            foreground = {(center, y), (center - 1, y + 1), (center + 1, y + 1)}
+        elif mark == "\u0303":
+            foreground = {(center - 1, y), (center + 1, y),
+                          (center - 2, y + 1), (center, y + 1)}
+        else:
+            raise KhcomError("credits_recipe", "Acento não suportado.", character=character)
+        edits.append("Accent uses two foreground rows with right/down shadow above the base.")
+    for x, y in foreground:
         if not (0 <= x < 8 and 0 <= y < 16) or rows[y][x] != 0:
-            raise KhcomError("credits_recipe", "Acento sobrescreveria a base.", character=character, x=x, y=y)
-    # Add shadow only in unused cells; it never erases the base or accent ink.
-    for x,y in sorted(foreground):
-        for sx,sy in ((x+1,y),(x,y+1),(x+1,y+1)):
-            if 0<=sx<8 and 0<=sy<16 and (sx,sy) not in foreground and rows[sy][sx]==0:rows[sy][sx]=2
-    for x,y in foreground:rows[y][x]=1
-    occupied=[(x,y) for y,row in enumerate(rows) for x,v in enumerate(row) if v]
-    width=max(x for x,y in occupied)+1
-    if not 1 <= width <= 8:
-        raise KhcomError("credits_recipe", "Largura resultante inválida.")
-    return rows,{'character':character,'base':base,'mark':mark,'advance':width,'accent_foreground':sorted(map(list,foreground)),'recipe_notes':edits,'ink_bounds':[min(x for x,y in occupied),min(y for x,y in occupied),width,max(y for x,y in occupied)+1]}
+            raise KhcomError("credits_recipe", "Acento sobrescreveria a base.",
+                             character=character, x=x, y=y)
+    # Shadow may fill only unused cells, never original or newly authored ink.
+    for x, y in sorted(foreground):
+        for sx, sy in ((x + 1, y), (x, y + 1), (x + 1, y + 1)):
+            if (0 <= sx < 8 and 0 <= sy < 16
+                    and (sx, sy) not in foreground and rows[sy][sx] == 0):
+                rows[sy][sx] = 2
+    for x, y in foreground:
+        rows[y][x] = 1
+    occupied = [(x, y) for y, row in enumerate(rows) for x, value in enumerate(row) if value]
+    width = max(x for x, _y in occupied) + 1
+    return rows, {"character": character, "base": base, "mark": mark,
+                  "advance": width, "accent_foreground": sorted(map(list, foreground)),
+                  "recipe_notes": edits,
+                  "ink_bounds": [min(x for x, _y in occupied), min(y for _x, y in occupied),
+                                 width, max(y for _x, y in occupied) + 1]}
 
 
 def generate_accent(character: str, base_rows, base_advance: int) -> dict:

@@ -72,15 +72,17 @@ Result<Success> Session::advance(std::uint16_t keys) {
   core_->runFrame(core_);
   if(crashed_)
     return Error{"core_crash", "O core sinalizou falha da execução emulada."};
-  std::array<short,2048> samples{};
-  for(int channel=0;channel<2;++channel) {
-    auto* buffer=core_->getAudioChannel(core_,channel);
-    while(int count=blip_read_samples(buffer,samples.data(),samples.size(),0)) {
-      audio_.samples+=count;
-      for(int i=0;i<count;++i) {
-        audio_.nonzero+=samples[i]!=0;
-        audio_.peak=std::max(audio_.peak,std::abs(static_cast<int>(samples[i])));
-      }
+  stereo_.clear();
+  std::array<short,2048> left{},right{};
+  auto* l=core_->getAudioChannel(core_,0);auto* r=core_->getAudioChannel(core_,1);
+  while(blip_samples_avail(l)>0 || blip_samples_avail(r)>0) {
+    const int count=blip_read_samples(l,left.data(),left.size(),0);
+    const int other=blip_read_samples(r,right.data(),right.size(),0);
+    if(count!=other || stereo_.size()+count*2>16384)
+      return Error{"audio_channels","Áudio estéreo fora do limite esperado por quadro."};
+    for(int n=0;n<count;++n) for(auto value:{left[n],right[n]}) {
+      stereo_.push_back(value);++audio_.samples;audio_.nonzero+=value!=0;
+      audio_.peak=std::max(audio_.peak,std::abs(static_cast<int>(value)));
     }
   }
   return Success{};
@@ -155,5 +157,6 @@ SaveInfo Session::save_info() const {
   return {backend,GBASavedataSize(&data)};
 }
 std::uint32_t Session::frames() const { return core_->frameCounter(core_); }
+double Session::seconds_per_frame() const { return double(core_->frameCycles(core_))/core_->frequency(core_); }
 const char* Session::core_version() { return projectVersion; }
 }

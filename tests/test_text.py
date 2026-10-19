@@ -50,6 +50,9 @@ class TextTests(unittest.TestCase):
         with self.assertRaises(KhcomError) as caught:
             build_dialogue_probe(b"not a recognized ROM")
         self.assertEqual(caught.exception.code, "upstream_rom_mismatch")
+        with self.assertRaises(KhcomError) as caught:
+            build_dialogue_probe(b"not a recognized ROM", scene="arbitrary-edit")
+        self.assertEqual(caught.exception.code, "probe_scene")
 
     def test_cp932_uses_variable_length_and_cannot_reuse_latin_codec(self):
         codec = self.codecs["sjis"]

@@ -32,6 +32,8 @@ public:
   std::span<const std::uint32_t> pixels() const { return pixels_; }
   std::span<const std::uint8_t> rom() const { return rom_; }
   const AudioStats& audio() const { return audio_; }
+  std::span<const std::int16_t> audio_frame() const { return stereo_; }
+  double seconds_per_frame() const;
   std::uint32_t frames() const;
   static constexpr unsigned width = 240;
   static constexpr unsigned height = 160;
@@ -46,5 +48,6 @@ private:
   std::string initial_save_digest_;
   std::vector<std::uint32_t> pixels_;
   AudioStats audio_;
+  std::vector<std::int16_t> stereo_;
 };
 }

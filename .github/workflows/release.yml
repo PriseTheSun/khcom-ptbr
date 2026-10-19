@@ -1,0 +1,63 @@
+name: Validate complete release candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_run:
+        description: Trusted private QA run containing the final release-candidate artifact
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  release-gates:
+    if: github.repository == 'PriseTheSun/khcom-ptbr' && github.ref == 'refs/heads/main'
+    environment: release
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Verify origin of QA artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ inputs.candidate_run }}
+          EXPECTED_COMMIT: ${{ github.sha }}
+        run: |
+          python - <<'PY'
+          import json, os, urllib.request
+          run = os.environ['RUN_ID']
+          assert run.isdecimal(), 'Invalid run id'
+          request = urllib.request.Request('https://api.github.com/repos/' + os.environ['REPO'] + '/actions/runs/' + run,
+              headers={'Authorization': 'Bearer ' + os.environ['GH_TOKEN'], 'Accept': 'application/vnd.github+json'})
+          with urllib.request.urlopen(request, timeout=30) as response:
+              data = json.load(response)
+          assert data['head_sha'] == os.environ['EXPECTED_COMMIT']
+          assert data['head_branch'] == 'main' and data['event'] == 'workflow_dispatch'
+          assert data['path'] == '.github/workflows/private-game-qa.yml'
+          assert data['conclusion'] == 'success'
+          PY
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-candidate
+          path: candidate
+          run-id: ${{ inputs.candidate_run }}
+          github-token: ${{ github.token }}
+      - name: Require all digest, coverage, native QA, signature and owner gates
+        env:
+          EXPECTED_COMMIT: ${{ github.sha }}
+        run: python3 tools/validate_release.py --candidate candidate --commit "$EXPECTED_COMMIT" --report release-gate.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-validation
+          path: release-gate.json
+          if-no-files-found: error
+          retention-days: 14
+      # The private smoke workflow intentionally does not produce a complete
+      # release-candidate today. Publishing/signing remains a separate open gate.

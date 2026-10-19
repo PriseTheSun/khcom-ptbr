@@ -13,10 +13,12 @@ ROOT = Path(__file__).resolve().parents[1]
 ROOT_FILES = {"README.md", ".gitignore", "pyproject.toml", "requirements-tools.txt", "requirements-build.txt", "CMakeLists.txt"}
 SOURCE_AREAS = {
     "app": {".cpp", ".hpp"}, "core": {".cpp", ".hpp"},
-    "platform": {".cpp", ".hpp"}, "cmake": {".cmake"},
+    "platform": {".cpp", ".hpp", ".txt"}, "cmake": {".cmake"},
+    "packaging": {".iss"},
     "tools": {".py"}, "tests": {".py", ".cpp", ".hpp"},
     "manifests": {".json"}, "docs": {".md"},
     ".github/workflows": {".yml"},
+    ".github": {".yaml"},
 }
 
 

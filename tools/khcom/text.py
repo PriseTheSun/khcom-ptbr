@@ -216,8 +216,18 @@ def reinsert_unedited(data: bytes, catalog: dict, *, parser: Any = None, check_i
     return result, {"format_version": 1, "operation": "unedited_roundtrip", "source_sha256": sha256(data), "target_sha256": sha256(result), "equal": True, "text_intervals_reencoded": len(log), "opaque_bytes_preserved_not_interpreted": len(data) - sum(item["source_span"]["end"] - item["source_span"]["start"] for item in actual["items"]), "intervals": log, "limitations": actual["coverage"]["limitations"]}
 
 
-def build_dialogue_probe(data: bytes, *, fetch: bool = False) -> tuple[bytes, dict]:
-    """One fixed, experimental dialogue only; never accepts arbitrary edits.
+DIALOGUE_PROBES = {
+    "sora-opening": {"id": "us/event_text/gEvent000Text00",
+                     "source_sha256": "73d4a10e436e6793e613cc772d945f80aa9c70307177eab8d48c6b3d5bb23da5",
+                     "translation": "Não há ninguém aqui.{END}"},
+    "riku-opening": {"id": "us/event_text/gEvent149Text01",
+                     "source_sha256": "98f5336a777eccc7635a3386a356292003f25671c80103512a0cfd095029407e",
+                     "translation": "Onde…onde estou…{END}"},
+}
+
+
+def build_dialogue_probe(data: bytes, *, fetch: bool = False, scene: str = "sora-opening") -> tuple[bytes, dict]:
+    """One selected fixed experimental dialogue; never accepts arbitrary edits.
 
     The original dialogue was reached by the runtime harness. This candidate
     exists to verify its replacement in that same runtime, not to authorize
@@ -225,14 +235,17 @@ def build_dialogue_probe(data: bytes, *, fetch: bool = False) -> tuple[bytes, di
     """
     from .graphics import extract_fonts
 
-    identity = "us/event_text/gEvent000Text00"
-    original_text = "Looks like nobody’s home.{END}"
-    candidate_text = "Não há ninguém aqui.{END}"
+    spec = DIALOGUE_PROBES.get(scene)
+    if spec is None:
+        raise KhcomError("probe_scene", "Cena piloto não reconhecida.", scene=scene)
+    identity = spec["id"]
+    candidate_text = spec["translation"]
     parser = load_textgen(fetch=fetch)
     catalog = extract_catalog(data, parser=parser)
     item = next((item for item in catalog["items"] if item["id"] == identity), None)
-    if item is None or item["source_text"] != original_text or item["codec_id"] != "game":
+    if item is None or item["source_sha256"] != spec["source_sha256"] or item["codec_id"] != "game":
         raise KhcomError("probe_identity", "A cena piloto não corresponde à origem fixada.")
+    original_text = item["source_text"]
     font_report, _files = extract_fonts(data)
     latin = next(font for font in font_report["fonts"] if font["id"] == "message_latin")
     codec = parser.load_charmap("us")["game"]
@@ -264,6 +277,8 @@ def build_dialogue_probe(data: bytes, *, fetch: bool = False) -> tuple[bytes, di
     if len(result) != len(data) or result[:span["start"]] != data[:span["start"]] or result[span["start"] + len(candidate):] != data[span["start"] + len(candidate):]:
         raise KhcomError("probe_boundary", "Piloto modificaria bytes fora da substituição fixa.")
     report = {"format_version": 1, "operation": "experimental_fixed_dialogue_probe", "id": identity, "source_sha256": sha256(data), "target_sha256": sha256(result), "rom_size": len(result), "span": span, "candidate_translation": candidate_text, "source_bytes": len(original), "candidate_bytes": len(candidate), "tail_bytes_preserved": len(original) - len(candidate), "source_advance_pixels": source_width, "candidate_advance_pixels": candidate_width, "glyph_indices": codes, "controls_unchanged": True, "relocated": False, "outside_candidate_unchanged": True, "latin_metrics": {key: value for key, value in font_report["latin_metrics"].items() if key != "values"}, "latin_asset_sha256": latin["sha256"], "frame_pointer_table": latin["frame_pointer_table"], "status": "awaiting_matching_runtime_capture", "release_approved": False, "limitations": ["One explicit dialogue only; general reinsertion remains blocked.", "Original runtime scene was observed separately; candidate screenshot and runtime trace are still required.", "All consumers and substring references are not proven; no relocation or expansion is authorized.", "Advance comparison is from the verified Latin table, not a universal box-width budget."]}
+    report["scene"] = scene
+    report["limitations"][0] = "One explicit dialogue only; arbitrary dialogue reinsertion remains blocked."
     return result, report
 
 

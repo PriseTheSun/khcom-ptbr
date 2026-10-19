@@ -1,0 +1,50 @@
+name: Private game QA (owner-controlled ephemeral runner)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: private-game-qa
+  cancel-in-progress: false
+
+jobs:
+  private-smoke:
+    if: github.repository == 'PriseTheSun/khcom-ptbr' && github.ref == 'refs/heads/main'
+    # Configure this environment and one-use runner outside this repository.
+    # Never attach this label to a persistent runner handling public PR jobs.
+    environment: private-game-qa
+    runs-on: [self-hosted, khcom-private-ephemeral]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Build trusted commit using pre-provisioned locked toolchain
+        run: |
+          cmake -S . -B build-private -DCMAKE_BUILD_TYPE=Release
+          cmake --build build-private --config Release --parallel 4
+          ctest --test-dir build-private -C Release --output-on-failure
+      - name: Private boot and preservation check
+        env:
+          TRUSTED_COMMIT: ${{ github.sha }}
+        shell: bash
+        run: |
+          if [ -x build-private/khcom-desktop ]; then
+            binary=build-private/khcom-desktop
+          else
+            binary=build-private/Release/khcom-desktop.exe
+          fi
+          python tools/private_game_qa.py --binary "$binary" --commit "$TRUSTED_COMMIT" --report public-qa/smoke.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: private-qa-sanitized
+          path: public-qa/smoke.json
+          if-no-files-found: error
+          retention-days: 14
+      # Private directories are retained by the owner's runner policy. No ROM,
+      # save, framebuffer, dump, raw process log or dependency cache is uploaded.
