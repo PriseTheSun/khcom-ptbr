@@ -67,7 +67,7 @@ def measure_event_pages(encoded: bytes, widths: list[int], *, origin: tuple[int,
             else:
                 glyph = code if 32 <= code <= 255 else SPECIAL_GLYPHS.get(code)
                 if glyph is None:
-                    raise KhcomError("event_unmapped_glyph", "Código produziria glifo de fallback no consumidor US.", code_unit=cursor, code=code)
+                    raise KhcomError("event_unmapped_glyph", "Código produziria glifo de fallback no consumidor US.", code_unit=cursor, value=code)
                 if highlight and alternate_palette is None:
                     raise KhcomError("event_alternate_palette", "Esta ocorrência não inicializa paleta de destaque.", code_unit=cursor)
                 record = {"code_unit": cursor, "code": code, "glyph_index": glyph,

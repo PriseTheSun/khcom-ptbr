@@ -100,22 +100,60 @@ void check_cancel(std::atomic<bool> *c) {
          "Operação cancelada. A instalação anterior foi preservada.");
 }
 } // namespace
+Result<Bytes> read_stream(std::istream &input, std::size_t limit,
+                          std::optional<std::size_t> expected_size) {
+  return guard<Bytes>([&] {
+    if (limit > import_limit || (expected_size && *expected_size > limit))
+      fail("file_limit", "Limite de leitura fora do intervalo permitido.");
+    const auto cap = expected_size.value_or(limit);
+    std::array<char, 65536> chunk;
+    Bytes result;
+    result.reserve(std::min(cap, chunk.size()));
+    while (true) {
+      // Read one sentinel byte beyond the cap, without allocating beyond it.
+      const auto amount = std::min(chunk.size(), cap - result.size() + 1);
+      bool threw = false;
+      try {
+        input.read(chunk.data(), static_cast<std::streamsize>(amount));
+      } catch (const std::exception &) {
+        threw = true;
+      }
+      const auto count = input.gcount();
+      if (count < 0 || static_cast<std::size_t>(count) > amount ||
+          input.bad() || (threw && !input.eof()) ||
+          (input.fail() && !input.eof()))
+        fail("file_read", "Falha na leitura do fluxo de dados.");
+      const auto received = static_cast<std::size_t>(count);
+      if (received > cap - result.size())
+        fail(expected_size ? "file_changed" : "file_limit",
+             "Fonte excedeu o tamanho permitido durante a leitura.");
+      const auto needed = result.size() + received;
+      if (needed > result.capacity())
+        result.reserve(std::min(cap, std::max(needed, result.capacity() * 2)));
+      result.insert(result.end(), chunk.begin(), chunk.begin() + received);
+      if (input.eof()) {
+        if (expected_size && result.size() != *expected_size)
+          fail("file_changed", "Fonte foi truncada durante a leitura.");
+        return result;
+      }
+      if (received != amount)
+        fail("file_read", "Fluxo terminou sem confirmar fim de arquivo.");
+    }
+  });
+}
 Result<Bytes> read_file(const fs::path &p, std::size_t limit) {
   return guard<Bytes>([&] {
+    if (limit > import_limit)
+      fail("file_limit", "Limite de leitura fora do intervalo permitido.");
     if (!fs::is_regular_file(p))
       fail("file_type", "Selecione um arquivo regular.");
-    auto n = fs::file_size(p);
+    const auto n = fs::file_size(p);
     if (n > limit)
       fail("file_limit", "Arquivo excede o limite permitido.");
-    std::ifstream f(p, std::ios::binary);
-    if (!f)
+    std::ifstream input(p, std::ios::binary);
+    if (!input)
       fail("file_open", "Não foi possível abrir o arquivo.");
-    Bytes b(n);
-    if (n && !f.read(reinterpret_cast<char *>(b.data()), n))
-      fail("file_read", "Arquivo mudou ou a leitura falhou.");
-    if (f.peek() != EOF)
-      fail("file_changed", "Arquivo cresceu durante a leitura.");
-    return b;
+    return take(read_stream(input, limit, static_cast<std::size_t>(n)));
   });
 }
 Result<Success> atomic_write(const fs::path &p, std::span<const std::uint8_t> b,
@@ -220,7 +258,19 @@ Result<Bytes> apply_bps(std::span<const std::uint8_t> s,
 }
 Result<RomImport> import_rom(const fs::path &p, int member) {
   return guard<RomImport>([&] {
-    auto b = take(read_file(p, 128 * 1024 * 1024));
+    return take(import_rom_bytes(take(read_file(p, import_limit)), member));
+  });
+}
+Result<RomImport> import_rom_stream(std::istream &input, int member) {
+  return guard<RomImport>([&] {
+    return take(
+        import_rom_bytes(take(read_stream(input, import_limit)), member));
+  });
+}
+Result<RomImport> import_rom_bytes(Bytes b, int member) {
+  return guard<RomImport>([&] {
+    if (b.size() > import_limit)
+      fail("file_limit", "Fonte excede o limite de importação.");
     RomImport out;
     if (b.size() >= 4 && b[0] == 'P' && b[1] == 'K') {
       mz_zip_archive z{};
@@ -512,27 +562,28 @@ Result<Success> store_save(const fs::path &r, const Json &m, int profile,
     return take(export_save(p, m, b));
   });
 }
-Result<Success> export_save(const fs::path &p, const Json &m,
-                            std::span<const std::uint8_t> b) {
-  return guard<Success>([&] {
+Result<Bytes> encode_save(const Json &m, std::span<const std::uint8_t> b) {
+  return guard<Bytes>([&] {
     if (b.size() != 32768)
       fail("save_size", "Nenhum save SRAM válido para exportar.");
+    if (!safe_name(m.at("save_compatibility").get<std::string>()))
+      fail("save_identity", "Compatibilidade do save inválida.");
     Json j = {{"schema_version", 1},
               {"game", "B8CE"},
               {"save_compatibility", m.at("save_compatibility")},
               {"sha256", sha256(b)},
               {"data", Json::binary(Bytes(b.begin(), b.end()))}};
-    auto packed = Json::to_cbor(j);
-    take(atomic_write(p, packed));
-    return Success{};
+    return Json::to_cbor(j);
   });
 }
-Result<Bytes> import_save(const fs::path &p, const Json &m) {
+Result<Bytes> decode_save(std::span<const std::uint8_t> b, const Json &m) {
   return guard<Bytes>([&] {
-    auto b = take(read_file(p, 65536));
-    auto j = Json::from_cbor(b);
+    if (b.size() > 65536)
+      fail("file_limit", "Envelope de save excede o limite permitido.");
+    auto j = Json::from_cbor(b.begin(), b.end());
     if (j.at("schema_version") != 1 || j.at("game") != "B8CE" ||
         j.at("save_compatibility") != m.at("save_compatibility") ||
+        !safe_name(m.at("save_compatibility").get<std::string>()) ||
         !j.at("data").is_binary())
       fail("save_identity",
            "Save pertence a outro jogo/formato/versão de compatibilidade.");
@@ -542,6 +593,15 @@ Result<Bytes> import_save(const fs::path &p, const Json &m) {
       fail("save_integrity", "Save exportado inválido ou corrompido.");
     return data;
   });
+}
+Result<Success> export_save(const fs::path &p, const Json &m,
+                            std::span<const std::uint8_t> b) {
+  return guard<Success>(
+      [&] { return take(atomic_write(p, take(encode_save(m, b)))); });
+}
+Result<Bytes> import_save(const fs::path &p, const Json &m) {
+  return guard<Bytes>(
+      [&] { return take(decode_save(take(read_file(p, 65536)), m)); });
 }
 Viewport viewport(int w, int h, const Config &c) {
   if (w <= 0 || h <= 0)
