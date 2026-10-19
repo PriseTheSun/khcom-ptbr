@@ -1,5 +1,10 @@
 # Validação de candidatos textuais
 
+O [ledger de eventos](event-text.md) acrescenta ocorrências, referências e
+paginação vinculadas ao build matching, mantendo consumidores desconhecidos.
+O [crédito traduzido](vertical-credit.md) demonstra a reinserção pública de um
+cabeçalho real nas duas variantes; não concede aprovação ao restante do corpus.
+
 ```sh
 .venv/bin/python tools/validate_localization.py --rom private/rom/B8CE.gba \
   --catalog private/localization/catalog-editado.json \

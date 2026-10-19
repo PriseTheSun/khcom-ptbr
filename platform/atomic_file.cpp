@@ -228,6 +228,9 @@ Result<TemporaryRecovery> recover_owned_temporaries(const fs::path &root) {
     if (!fs::exists(root))
       return result;
     unsigned examined = 0;
+    std::vector<fs::path> records;
+    // Finish enumeration before mutations; directory iteration is not a
+    // snapshot.
     for (auto it = fs::recursive_directory_iterator(root);
          it != fs::recursive_directory_iterator(); ++it) {
       if (it.depth() >= 8)
@@ -240,15 +243,23 @@ Result<TemporaryRecovery> recover_owned_temporaries(const fs::path &root) {
       auto name = utf8(it->path().filename());
       if (!name.starts_with(".khcom-owned-") || !name.ends_with(".json"))
         continue;
-      auto record = it->path();
+      records.push_back(it->path());
+    }
+    for (const auto &record : records) {
+      const auto name = utf8(record.filename());
       try {
         if (fs::is_symlink(record) || !fs::is_regular_file(record) ||
             fs::file_size(record) > 4096)
           throw std::runtime_error(
               "Registro sem identidade/formato reconhecido.");
-        std::ifstream input(record, std::ios::binary);
         Json j;
-        input >> j;
+        {
+          // Close our read handle before unlinking the journal. Windows streams
+          // do not grant delete sharing; retaining this handle prevents
+          // cleanup.
+          std::ifstream input(record, std::ios::binary);
+          input >> j;
+        }
         if (j.at("schema") != "khcom-owned-write-v1")
           throw std::runtime_error("Versão de ownership desconhecida.");
         auto temp = j.at("temporary").get<std::string>(),

@@ -10,6 +10,7 @@ from khcom.errors import KhcomError
 from khcom.rom import read_rom
 from khcom.text import json_bytes, read_catalog, write_private
 from khcom.credits_profile import PROFILE_ID
+from khcom.event_edit import PROFILE_ID as EVENT_PROFILE
 from khcom.validation import plan_translations, apply_translation_plan
 from khcom.upstream import load_textgen
 
@@ -22,7 +23,7 @@ def main() -> int:
     ap.add_argument("--out", required=True, type=Path, help="Nova ROM derivada em private/")
     ap.add_argument("--report", required=True, type=Path, help="Novo relatório por intervalo em private/")
     ap.add_argument("--fetch-upstream", action="store_true")
-    ap.add_argument("--profile", choices=[PROFILE_ID], help="Perfil explícito de candidato; não aprova tradução/release")
+    ap.add_argument("--profile", choices=[PROFILE_ID, EVENT_PROFILE], help="Perfil explícito de candidato; não aprova tradução/release")
     ap.add_argument("--matching-tree", type=Path, help="Árvore de build matching para revalidar referências do perfil")
     args = ap.parse_args()
     try:

@@ -3,7 +3,9 @@
 #include "platform/storage_lock.hpp"
 #include <chrono>
 #include <iostream>
+#include <limits>
 #include <miniz.h>
+#include <sstream>
 #ifdef _WIN32
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -19,7 +21,7 @@
 using namespace khcom;
 using namespace khcom::desktop;
 namespace {
-void require(bool v, const char *m) {
+void require(bool v, const std::string &m) {
   if (!v)
     throw std::runtime_error(m);
 }
@@ -60,6 +62,82 @@ Bytes zip(const std::vector<std::pair<std::string, Bytes>> &entries) {
   mz_zip_writer_end(&z);
   return result;
 }
+class NonSeekingBuffer : public std::stringbuf {
+public:
+  explicit NonSeekingBuffer(std::string value)
+      : std::stringbuf(std::move(value), std::ios::in) {}
+  unsigned seek_calls = 0;
+
+protected:
+  pos_type seekoff(off_type, std::ios_base::seekdir,
+                   std::ios_base::openmode) override {
+    ++seek_calls;
+    return pos_type(off_type(-1));
+  }
+  pos_type seekpos(pos_type, std::ios_base::openmode) override {
+    ++seek_calls;
+    return pos_type(off_type(-1));
+  }
+};
+class BrokenBuffer : public std::streambuf {
+protected:
+  std::streamsize xsgetn(char *, std::streamsize) override {
+    throw std::runtime_error("adapter read failed");
+  }
+};
+std::string recovery_details(const TemporaryRecovery &r, const fs::path &dir) {
+  Json files = Json::array();
+  for (const auto &entry : fs::directory_iterator(dir)) {
+    const auto name = entry.path().filename().u8string();
+    files.push_back(std::string(name.begin(), name.end()));
+  }
+  return Json{{"recovered", r.recovered},
+              {"retained", r.retained},
+              {"remaining_files", files}}
+      .dump();
+}
+void stream_contracts() {
+  const std::string value(70000, 'A');
+  NonSeekingBuffer buffer(value);
+  std::istream input(&buffer);
+  auto received = take(read_stream(input, value.size()));
+  require(received == b(value) && received.capacity() <= value.size() &&
+              buffer.seek_calls == 0,
+          "bounded non-seekable stream without excess allocation");
+  std::istringstream empty;
+  require(take(read_stream(empty, 0, 0)).empty(), "zero size stream");
+  std::istringstream exact("abc");
+  exact.exceptions(std::ios::failbit | std::ios::badbit);
+  require(take(read_stream(exact, 3, 3)) == b("abc"),
+          "expected EOF exception is not an IO failure");
+  std::istringstream too_long("abcd"), short_read("ab"), grew("abcd");
+  error(read_stream(too_long, 3), "file_limit");
+  error(read_stream(short_read, 10, 3), "file_changed");
+  error(read_stream(grew, 10, 3), "file_changed");
+  std::istringstream untouched("abc");
+  error(read_stream(untouched, std::numeric_limits<std::size_t>::max()),
+        "file_limit");
+  error(read_stream(untouched, 3, 4), "file_limit");
+  require(untouched.peek() == 'a', "invalid limit fails before reading");
+  std::istringstream failed("abc");
+  failed.setstate(std::ios::failbit);
+  error(read_stream(failed, 3), "file_read");
+  for (bool exceptions : {false, true}) {
+    BrokenBuffer broken;
+    std::istream io(&broken);
+    if (exceptions)
+      io.exceptions(std::ios::badbit);
+    error(read_stream(io, 10), "file_read");
+  }
+  auto archive = zip({{"a.gba", Bytes(128)}, {"b.gba", Bytes(128)}});
+  NonSeekingBuffer zip_buffer(std::string(archive.begin(), archive.end()));
+  std::istream zip_stream(&zip_buffer);
+  auto imported = take(import_rom_stream(zip_stream));
+  require(imported.bytes.empty() && imported.choices.size() == 2 &&
+              zip_buffer.seek_calls == 0,
+          "ZIP stream preserves explicit multiple-member choice");
+  error(import_rom_bytes(b("not a ROM")), "rom_identity");
+}
 void interrupted_fixture(const fs::path &directory) {
   fs::create_directories(directory);
   auto temp = directory / ".khcom-write-fixture",
@@ -98,6 +176,7 @@ int main() {
        std::to_string(
            std::chrono::steady_clock::now().time_since_epoch().count()));
   try {
+    stream_contracts();
     fs::create_directories(root);
     auto lock = take(StorageLock::acquire(root));
     error(StorageLock::acquire(root), "storage_busy");
@@ -161,6 +240,14 @@ int main() {
     Json manifest = {{"save_compatibility", "B8CE-sram-v1"},
                      {"target_sha256", std::string(64, 'a')}};
     Bytes save(32768, 0x5a);
+    const auto encoded = take(encode_save(manifest, save));
+    require(take(decode_save(encoded, manifest)) == save,
+            "save codec requires no path or filesystem");
+    error(encode_save(manifest, Bytes(32767)), "save_size");
+    error(decode_save(Bytes(65537), manifest), "file_limit");
+    auto incompatible_codec = manifest;
+    incompatible_codec["save_compatibility"] = "another-v2";
+    error(decode_save(encoded, incompatible_codec), "save_identity");
     take(store_save(root, manifest, 0, save));
     require(take(load_save(root, manifest, 0)) == save,
             "cartridge envelope reload");
@@ -221,7 +308,17 @@ int main() {
     recovery = take(recover_owned_temporaries(interrupted));
     require(recovery.recovered == 1 && recovery.retained.empty() &&
                 fs::is_empty(interrupted),
-            "partial owned bytes recover without requiring valid content");
+            "partial owned bytes recover without requiring valid content: " +
+                recovery_details(recovery, interrupted));
+    auto multiple = root / "multiple-interrupted";
+    interrupted_fixture(multiple / "one");
+    interrupted_fixture(multiple / "two");
+    recovery = take(recover_owned_temporaries(multiple));
+    require(recovery.recovered == 2 && recovery.retained.empty() &&
+                fs::is_empty(multiple / "one") &&
+                fs::is_empty(multiple / "two"),
+            "snapshot enumeration recovers separate owned files: " +
+                recovery_details(recovery, multiple));
     interrupted_fixture(interrupted);
     fs::remove(interrupted / ".khcom-write-fixture");
     put(interrupted / ".khcom-write-fixture", b("foreign replacement"));
@@ -300,9 +397,10 @@ int main() {
     }
     lock.reset();
     fs::remove_all(root);
-    std::cout << "BPS/ZIP identity, config recovery, atomic save "
-                 "envelope/backups/profiles, physical viewport "
-                 "and60/120/144/500Hz scheduler contracts passed.\n";
+    std::cout
+        << "Bounded streams, BPS/ZIP identity, config recovery, atomic save "
+           "envelope/backups/profiles, physical viewport "
+           "and 60/120/144/500Hz scheduler contracts passed.\n";
     return 0;
   } catch (const std::exception &e) {
     std::cerr << e.what() << " (evidence left in " << root << ")\n";

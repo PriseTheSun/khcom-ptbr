@@ -26,12 +26,28 @@ class RecipeTests(unittest.TestCase):
                   "builders": {"source.py": "d" * 64}, "contains_original_payload": False, "full_translation": False}
         validate_recipe(recipe, recipe["builders"])
         for mutation in [lambda r: r.update(command="arbitrary command"), lambda r: r.update(payload="bytes"),
-                         lambda r: r.update(recipe_version=4), lambda r: r.update(full_translation=True),
+                         lambda r: r.update(recipe_version=5), lambda r: r.update(full_translation=True),
                          lambda r: r.update(builders={})]:
             bad = copy.deepcopy(recipe)
             mutation(bad)
             with self.assertRaises(KhcomError):
                 validate_recipe(bad, recipe["builders"])
+
+    def test_coalesced_source_bytes_are_private_and_must_match_exactly(self):
+        from khcom.bps import create
+        source, target = b"abcdefghi", b"AbcDefghi"
+        _patch, report = create(source, target)
+        components = [{"component": "sora-dialogue", "changed_spans": [[0, 1], [3, 4]]}]
+        rows = provenance(report["literals"], components, source, target)
+        self.assertTrue(rows[0]["coalesced_source_ranges"])
+        self.assertFalse(rows[0]["public_literal_approved"])
+        self.assertEqual(rows[0]["provenance"], "local-rom-derived-composition")
+        with self.assertRaises(KhcomError):
+            provenance(report["literals"], components)
+        bad = copy.deepcopy(report["literals"])
+        bad[0]["coalesced_source_ranges"][0]["source_sha256"] = "0" * 64
+        with self.assertRaises(KhcomError):
+            provenance(bad, components, source, target)
 
 
 if __name__ == "__main__":

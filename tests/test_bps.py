@@ -113,6 +113,27 @@ class BpsTests(unittest.TestCase):
         with self.assertRaises(KhcomError):
             create(b"", b"", b"x" * 65537)
 
+    def test_fragmented_recompression_keeps_original_bytes_in_literal_provenance(self):
+        source=b'head'+b'00ab11cd22'+b'preserved suffix'
+        target=b'head'+b'XXabYYcdZZ'+b'preserved suffix'
+        with patch('khcom.bps.MAX_LITERAL_RECORDS',1):
+            encoded,report=create(source,target)
+        self.assertEqual(apply(source,encoded),target)
+        self.assertEqual(len(report['literals']),1)
+        literal=report['literals'][0]
+        self.assertEqual(literal['target_start'],4)
+        self.assertEqual(literal['length'],10)
+        self.assertEqual(literal['coalesced_source_ranges'],[
+            {'source_start':6,'length':2,'source_sha256':digest(b'ab')},
+            {'source_start':10,'length':2,'source_sha256':digest(b'cd')}])
+        self.assertFalse(report['distribution_approved'])
+        self.assertEqual(literal['provenance'],'unreviewed')
+
+    def test_coalesced_source_provenance_has_bounded_record_count(self):
+        with patch('khcom.bps.MAX_ACTIONS',2),self.assertRaises(KhcomError) as caught:
+            create(b'00ab11cd22',b'XXabYYcdZZ')
+        self.assertEqual(caught.exception.code,'bps_budget')
+
     @unittest.skipUnless(os.environ.get("KHCOM_FLIPS"), "set KHCOM_FLIPS for independent interoperability")
     def test_flips_independent_encoder_and_decoder(self):
         cli = str(Path(os.environ["KHCOM_FLIPS"]).resolve())

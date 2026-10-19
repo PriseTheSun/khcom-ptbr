@@ -1,0 +1,54 @@
+{
+  "schema": "khcom-movie-codec-provenance-v1",
+  "upstream_commit": "5dc49b75068bfe24e07bdaf365570d64682680c3",
+  "rom_sha256": "6f6e7b61bb7b6ef7e2bea6e9dd01e70570a715835cc3713abe86186fd2c4e28d",
+  "matching_elf_sha256": "6498bbaaed4b0e944def1ad55fc1e40a3d719b648f99e4f13f72d4167353e2ec",
+  "source_files": {
+    "asm/movie_codec.s": "68f282b8e26fd2f96f527a86519ceab9d9455968d3c85dcca809220670166e3b",
+    "src/lib/movie_player.c": "a60b626c8f6c19693cbaf95aefdf2844f816403feac28cdbdad279d01da90678",
+    "src/lib/movie.c": "58e451ab8f3dd5b1654b7ae30d9a064c5b80cdfa4898036106288a50328f6793",
+    "include/lib/movie.h": "ccc846ea0ffd9bf2234054dd06fd8072d2e49486db2a4435a538caa7a3a0a433",
+    "src/evt/mode_movie.c": "0474818da2285ecdf7d75242bfa6aae1a5370455e1a087402515a85d9b0234d1"
+  },
+  "validated_original_frames": 3605,
+  "validated_delta_byte_roundtrips": 3590,
+  "pixel_review": {
+    "scope": "All 3,605 frames in 14 contact sheets, plus OCR candidates and title at full resolution",
+    "ocr": "independent triage only; absence is not proof",
+    "raster_text": [
+      {
+        "movie": "gMovieOpening",
+        "resource": "title logo",
+        "text_class": "Kingdom Hearts, Disney, Square Enix",
+        "decision": "preserve user-authorized names/brands"
+      },
+      {
+        "movie": "gMovieOpening",
+        "resource": "title logo subtitle",
+        "text_class": "Chain of Memories",
+        "decision": "translate Corrente de Memórias explicitly requested by user",
+        "state": "opening raster recipe verified against game decoder; other title resources remain separate"
+      }
+    ],
+    "other_four_movies": "No raster text observed in full sequence review; subtitles separately inventoried"
+  },
+  "subtitle_rows": {
+    "declared": 29,
+    "selected": 27,
+    "inactive_blank_placeholders": 2,
+    "unique_catalog_items": 28,
+    "translated_opening_lines": 3,
+    "remaining_active_rows": 24
+  },
+  "limitation": "This verifies movie resources, not whole game textual coverage or campaign completion.",
+  "title_probe": {
+    "target_sha256": "5f10e20c2699009ca0cd90ce9721b03b403f94a308feff840ad4dd618238ca33",
+    "edited_frames": 91,
+    "unchanged_frames": 1526,
+    "final_core_frame_matches_original": 7407,
+    "maximum_decode_delivery_jitter_core_frames": 1,
+    "audio_frame_types_fps_and_rom_size_unchanged": true,
+    "maximum_edited_packet_bytes": 5464,
+    "decode_buffer_bytes": 8192
+  }
+}

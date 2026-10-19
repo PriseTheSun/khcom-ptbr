@@ -1,4 +1,4 @@
-"""Bounded semantic ownership of seven pointer-shaped US asset words.
+"""Bounded semantic ownership of pointer-shaped words in reviewed US assets.
 
 These profiles derive from upstream revision 5dc49b7 and the matching ELF.
 Hashes identify source descriptions and encoded files, never grant free space.
@@ -31,10 +31,39 @@ PROFILES = (
      'sha256': '565539f2ddfcac236389b3217c9f7a6a40359b7d314b53d78ff8b14e46aa245d',
      'manifest': 'config/assets/staff_roll_audio.yaml',
      'manifest_sha256': '53a7ecd42c71d077362fa67920b2a4fdc65479f4f50f76d6aac53d36144f7295'},
+    {'symbol': 'gSor1ll56Tiles', 'format': 'gba_4bpp_tiles',
+     'asset': 'build/us/gen/sprites_fld/sor1ll56.4bpp',
+     'sha256': 'dd7e370ec890888577a1f38d93c695e6ffa32ea38d68ebf0d51161b86787eb4c',
+     'manifest': 'config/assets/sprites_fld.yaml',
+     'manifest_sha256': '504777c7a1b1ebde0754d9a9e42700182c9a68ae70f3e8e16519e3e6d243ac02'},
+    {'symbol': 'gStaffRollRikuScene13Tiles', 'format': 'gba_4bpp_tiles',
+     'asset': 'build/us/gen/sprites_staff_roll/gStaffRollRikuScene13Tiles.4bpp',
+     'sha256': '7e98a4442a17c65272ea7e3211b3a66dda8087df32046e8af7fb387e03ad0b1f',
+     'manifest': 'config/assets/sprites_staff_roll.yaml',
+     'manifest_sha256': '3fd0609fe24f2b4488f8e648c52ad86e33c72802631e7bfc8966c150fcc8b93e'},
+    {'symbol': 'gStaffRollRikuImage1Palette', 'format': 'gba_palette_u16',
+     'asset': 'build/us/gen/sprites_staff_roll/gStaffRollRikuImage1Palette.gbapal',
+     'sha256': '2b218916720da63ecb6dc4c5cda291f7db98b6a73d23e5302bdcf4531eded8a5',
+     'manifest': 'config/assets/sprites_staff_roll.yaml',
+     'manifest_sha256': '3fd0609fe24f2b4488f8e648c52ad86e33c72802631e7bfc8966c150fcc8b93e'},
+    {'symbol': 'gMovieOpening', 'format': 'khcom_movie_video_packet',
+     'asset': 'build/us/gen/movies/gMovieOpening.bin',
+     'sha256': '99bbbc95a2f95883e52a9c9be911f8882c25d1a67ec2a950c440f40317f13313',
+     'manifest': 'config/assets/movies.yaml',
+     'manifest_sha256': '9fd0053733d1a0e29fc0bbfe9cae56abe3382327c19a649050fc522f7fdcfe78'},
+    {'symbol': 'gMovieRikuEnding', 'format': 'khcom_movie_video_packet',
+     'asset': 'build/us/gen/movies/gMovieRikuEnding.bin',
+     'sha256': '750be215a2ee23b1b52e072a316f8401fb6cefbc29992ca89a11f6131b89ae52',
+     'manifest': 'config/assets/movies.yaml',
+     'manifest_sha256': '9fd0053733d1a0e29fc0bbfe9cae56abe3382327c19a649050fc522f7fdcfe78'},
 )
 AUDIO_SOURCES = {
     'src/sroll/sroll_tmr.c': '578f44f092769fefc534c987edc44d351126f21d7dcc994defcdce1f6d603a80',
     'src/lib/audio_block_codec.c': '88dd303c99b5791ce2167b1c1edbca6b27a2ff74d66ef9d4afc280326cbd2f9d',
+}
+MOVIE_SOURCES = {
+    'asm/movie_codec.s': '68f282b8e26fd2f96f527a86519ceab9d9455968d3c85dcca809220670166e3b',
+    'src/lib/movie_player.c': 'a60b626c8f6c19693cbaf95aefdf2844f816403feac28cdbdad279d01da90678',
 }
 
 
@@ -91,6 +120,22 @@ def classify_encoded_words(words: list[dict], rom: bytes, root: Path, symbols: l
                 evidence['audio_block'] = payload
                 evidence['decoder_sources'] = [_verified(root, path, digest)[1] for path, digest in AUDIO_SOURCES.items()]
                 evidence['interpretation'] = 'ReadNextAudioBlock passes this payload to DecodeAudioBlock; bytes are consumed by the bit reader.'
+            elif profile['format']=='khcom_movie_video_packet':
+                from .movies import parse_movie
+                from .movie_delta import decode_keyframe,parse_delta
+                movie=parse_movie(asset)
+                packet=next((p for p in movie['video']['blocks'] if p['span'][0]<=offset-start and offset-start+4<=p['span'][1]),None)
+                if packet is None:continue
+                a,b=packet['span']
+                if packet['type']==0:decode_keyframe(asset[a:b],movie['width'],movie['height'])
+                else:parse_delta(asset[a:b],movie['width'],movie['height'])
+                evidence['movie_packet']=packet
+                evidence['decoder_sources']=[_verified(root,path,digest)[1] for path,digest in MOVIE_SOURCES.items()]
+                evidence['interpretation']='The typed movie packet is consumed by the verified video codec, not loaded as a ROM pointer table.'
+            elif profile['format']=='gba_palette_u16':
+                if len(asset)%2:raise KhcomError('matching_palette','Paleta não contém palavras u16 completas.')
+                evidence['palette_word_index']=(offset-start)//2
+                evidence['interpretation']='Each u16 is a GBA palette color; original high bits are retained.'
             else:
                 if len(asset) % 32:
                     raise KhcomError('matching_tiles', 'Dados 4bpp não contêm tiles completos.')

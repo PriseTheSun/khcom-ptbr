@@ -8,6 +8,8 @@ import sys
 
 from khcom.bps import apply, create
 from khcom.credits_profile import build_profile
+from khcom.credits_edit import build_credit_probe
+from khcom.movie_title import build_opening_title_probe
 from khcom.errors import KhcomError
 from khcom.graphic_probe import build_title_probe
 from khcom.rom import read_rom
@@ -49,13 +51,18 @@ def compose(source: bytes, candidates: list[tuple[str, bytes]]) -> tuple[bytes, 
     return bytes(target), report
 
 
-def reconstruct(source: bytes, *, fetch=False, version=3):
-    if version not in (1, 2, 3):
+def reconstruct(source: bytes, *, fetch=False, version=4):
+    if version not in (1, 2, 3, 4):
         raise KhcomError("recipe_version", "Versão de receita não suportada.")
     dialogue, dialogue_report = build_dialogue_probe(source, fetch=fetch)
     title, title_report = build_title_probe(source)
-    fonts, font_report, _atlases = build_profile(source)
-    candidates = [("sora-dialogue", dialogue), ("title-prompt", title), ("credits-fonts", fonts)]
+    if version >= 4:
+        fonts, font_report = build_credit_probe(source, fetch=fetch)
+        credit_owner = "credits-fonts-and-heading"
+    else:
+        fonts, font_report, _atlases = build_profile(source)
+        credit_owner = "credits-fonts"
+    candidates = [("sora-dialogue", dialogue), ("title-prompt", title), (credit_owner, fonts)]
     details = {"dialogue": dialogue_report, "title": title_report, "fonts": font_report}
     if version >= 2:
         riku, riku_report = build_dialogue_probe(source, fetch=fetch, scene="riku-opening")
@@ -66,6 +73,10 @@ def reconstruct(source: bytes, *, fetch=False, version=3):
         opening, opening_report = build_opening_subtitle_probe(source)
         candidates.append(("opening-subtitles", opening))
         details["opening"] = opening_report
+    if version >= 4:
+        logo, logo_report = build_opening_title_probe(source)
+        candidates.append(("opening-raster-subtitle", logo))
+        details["raster_subtitle"] = logo_report
     candidate, components = compose(source, candidates)
     return candidate, components, details
 
@@ -76,7 +87,7 @@ def main() -> int:
     parser.add_argument("--member")
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument("--fetch-upstream", action="store_true")
-    parser.add_argument("--recipe-version", type=int, choices=[1, 2, 3], default=3)
+    parser.add_argument("--recipe-version", type=int, choices=[1, 2, 3, 4], default=4)
     args = parser.parse_args()
     try:
         destination = args.out.resolve()
@@ -98,6 +109,7 @@ def main() -> int:
                     "description": ("Piloto: APERTE INICIAR, uma fala de Sora e fontes de créditos. "
                                     + ("Inclui uma fala de Riku e Salvar jogo?/Sim/Não. " if args.recipe_version >= 2 else "")
                                     + ("Três legendas da abertura traduzidas. " if args.recipe_version >= 3 else "")
+                                    + ("Subtítulo Corrente de Memórias no vídeo e um cabeçalho de crédito traduzidos. " if args.recipe_version >= 4 else "")
                                     + "A maior parte do jogo permanece em inglês."),
                     "components": components}
         destination.mkdir(parents=True, exist_ok=False)

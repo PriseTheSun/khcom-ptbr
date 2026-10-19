@@ -23,8 +23,9 @@ def plan_translations(data: bytes, catalog: dict, *, profile_id: str | None = No
                       check_identity: bool = True) -> TranslationPlan:
     from .credits_edit import prepare_credit_context, validate_credit_edit
     from .credits_profile import DOMAIN, PROFILE_ID
+    from .event_edit import PROFILE_ID as EVENT_PROFILE, prepare_event_context, validate_event_edit
 
-    if profile_id not in (None, PROFILE_ID):
+    if profile_id not in (None, PROFILE_ID, EVENT_PROFILE):
         raise KhcomError("text_profile", "Perfil de reinserção não reconhecido.", profile_id=profile_id)
     if profile_id is not None and not check_identity:
         raise KhcomError("text_profile_identity", "Um perfil de jogo exige a identidade real da ROM.")
@@ -35,9 +36,13 @@ def plan_translations(data: bytes, catalog: dict, *, profile_id: str | None = No
     pairs = bind_catalog(catalog, actual)
     codecs = parser.load_charmap("us")
     credit_context = None
+    event_context = None
     if profile_id == PROFILE_ID and any(o["domain"] == DOMAIN and e.get("translation") is not None
                                          and e["translation"] != o["source_text"] for o, e in pairs):
         credit_context = prepare_credit_context(data, actual, matching_tree=matching_tree, rom_identity=rom_identity)
+    if profile_id == EVENT_PROFILE and any(o["domain"] == "event_text" and e.get("translation") is not None
+                                          and e["translation"] != o["source_text"] for o, e in pairs):
+        event_context = prepare_event_context(data, actual, matching_tree=matching_tree, rom_identity=rom_identity)
     rows = []
     writes = []
     for original, edited in pairs:
@@ -74,6 +79,7 @@ def plan_translations(data: bytes, catalog: dict, *, profile_id: str | None = No
         source_controls = [token["name"] for token in source_tokens if token["kind"] != "text"]
         if original["opaque_codes"]:
             diagnostics.append({"code": "opaque_codes", "codes": original["opaque_codes"]})
+        encoded = None
         try:
             encoded = codec.encode(candidate, original["id"])
         except parser.TextError as error:
@@ -102,6 +108,17 @@ def plan_translations(data: bytes, catalog: dict, *, profile_id: str | None = No
                 diagnostics.append({"code": "byte_overflow", "actual": len(encoded), "maximum": original["byte_budget"]})
             if len(encoded) % codec.width:
                 diagnostics.append({"code": "code_unit_alignment", "width": codec.width, "actual": len(encoded)})
+        if original["domain"] == "event_text" and event_context is not None:
+            if encoded is not None:
+                contract = validate_event_edit(original, encoded, event_context)
+                row.update({key: value for key, value in contract.items() if key != "diagnostics"})
+                diagnostics.extend(contract["diagnostics"])
+            row["status"] = "blocked" if diagnostics else "candidate_buildable_runtime_review_required"
+            if not diagnostics:
+                start = original["source_span"]["start"]
+                writes.append({"owner": original["id"], "start": start, "end": start + len(encoded),
+                               "source_sha256": sha256(data[start:start + len(encoded)]), "payload": encoded})
+            continue
         # Editable review/status annotations cannot fill these source-owned
         # unknowns. A future verified consumer registry will own that evidence.
         if original["pointer_refs"] is None:
@@ -111,10 +128,11 @@ def plan_translations(data: bytes, catalog: dict, *, profile_id: str | None = No
         if missing:
             diagnostics.append({"code": "layout_unknown", "fields": missing, "message": original["layout_unknown_reason"]})
         row["status"] = "blocked" if diagnostics else "static_checks_passed_runtime_review_required"
-    if writes:
+    if writes and credit_context is not None:
         writes.extend(credit_context.profile_writes)
     report = {"schema_version": 2, "operation": "candidate_text_validation", "source_sha256": actual["origin"]["sha256"],
-            "selected_profile": profile_id, "profile_evidence": credit_context.evidence if credit_context else None,
+            "selected_profile": profile_id, "profile_evidence": (credit_context.evidence if credit_context else
+                event_context.evidence if event_context else None),
             "items": rows, "changed_items": sum(row["changed"] for row in rows),
             "blocked_items": sum(row["status"] == "blocked" for row in rows),
             "diagnostic_counts": dict(Counter(d["code"] for row in rows for d in row["diagnostics"])),

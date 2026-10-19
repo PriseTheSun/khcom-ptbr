@@ -20,6 +20,11 @@ MAX_METADATA = 64 * 1024
 # byte budgets. Patches exceeding these limits are unsupported, not malformed.
 MAX_ACTIONS = 262144
 MAX_LITERAL_RECORDS = 65536
+# Small equal islands inside an edit otherwise produce two extra BPS commands
+# and separate audit records for almost every word of recompressed graphics.
+# Keep an eight-byte matching run as a SourceRead; shorter bridges are literal
+# bytes with explicit source provenance, never automatically redistributable.
+MIN_SOURCE_READ_RUN = 8
 
 
 def digest(data: bytes) -> str:
@@ -142,6 +147,7 @@ def create(source: bytes, target: bytes, metadata: bytes = b"") -> tuple[bytes, 
     offset = 0
     literals = []
     action_count = 0
+    provenance_records = 0
     while offset < len(target):
         action_count += 1
         if action_count > MAX_ACTIONS:
@@ -158,21 +164,39 @@ def create(source: bytes, target: bytes, metadata: bytes = b"") -> tuple[bytes, 
         else:
             if len(literals) >= MAX_LITERAL_RECORDS:
                 raise KhcomError("bps_budget", "A diferença excede o orçamento de auditoria de literais.")
-            while end < len(target) and (end >= len(source) or source[end] != target[end]):
-                end += 1
+            coalesced = []
+            provenance_records += 1
+            while end < len(target):
+                if end >= len(source) or source[end] != target[end]:
+                    end += 1
+                    continue
+                match_end = end
+                while (match_end < min(len(source), len(target), end + MIN_SOURCE_READ_RUN)
+                       and source[match_end] == target[match_end]):
+                    match_end += 1
+                if match_end - end >= MIN_SOURCE_READ_RUN or match_end == len(target):
+                    break
+                provenance_records += 1
+                if provenance_records > MAX_ACTIONS:
+                    raise KhcomError("bps_budget", "A proveniência dos literais excede o orçamento de registros.")
+                coalesced.append({"source_start": end, "length": match_end - end,
+                                  "source_sha256": digest(source[end:match_end])})
+                end = match_end
+            if provenance_records > MAX_ACTIONS:
+                raise KhcomError("bps_budget", "A proveniência dos literais excede o orçamento de registros.")
             result.extend(_number(((end - offset - 1) << 2) | 1))
             patch_start = len(result)
             result.extend(target[offset:end])
             literals.append({"target_start": offset, "length": end - offset,
                              "patch_start": patch_start, "sha256": digest(target[offset:end]),
-                             "provenance": "unreviewed"})
+                             "provenance": "unreviewed", "coalesced_source_ranges": coalesced})
         offset = end
     result.extend(struct.pack("<II", _crc(source), _crc(target)))
     result.extend(struct.pack("<I", _crc(result)))
     patch = bytes(result)
     if len(patch) > MAX_PATCH:
         raise KhcomError("bps_budget", "Patch produzido excede o orçamento admitido.")
-    report = {"schema_version": 1, "format": "BPS1", "generator": "khcom-linear-v1",
+    report = {"schema_version": 1, "format": "BPS1", "generator": "khcom-linear-coalesced-v2",
               "source_sha256": digest(source), "target_sha256": digest(target),
               "patch_sha256": digest(patch), "source_size": len(source),
               "target_size": len(target), "patch_size": len(patch),

@@ -8,7 +8,7 @@ import struct
 
 from .errors import KhcomError
 from .graphics import extract_fonts
-from .movie_delta import decode_delta, decode_keyframe, encode_delta, parse_delta, postprocess_pixels, paint_keyframe_selectors, replace_delta_pixels
+from .movie_delta import decode_delta, decode_keyframe, encode_delta, parse_delta, postprocess_pixels, paint_keyframe_selectors, replace_delta_pixels, compact_node
 from .movies import inventory_movies
 from .upstream import load_assetgen, sha256
 
@@ -50,7 +50,7 @@ def build_opening_title_probe(data: bytes) -> tuple[bytes,dict]:
     movie=inventory['movies'][0]
     if movie['symbol']!='gMovieOpening' or movie['frames']!=1617:raise KhcomError('movie_title_profile','Perfil de abertura divergente.')
     start,end=movie['span'];raw=data[start:end];video=movie['video'];plate,art=_plate(data)
-    replacement={};previous=modified_previous=None;changes=[]
+    replacement={};previous=modified_previous=None;changes=[];lossless_savings=0
     for frame in video['blocks'][:LAST+1]:
         index=frame['index'];a,b=frame['span'];packet=raw[a:b]
         if frame['type']==0:original=decode_keyframe(packet)
@@ -58,6 +58,12 @@ def build_opening_title_probe(data: bytes) -> tuple[bytes,dict]:
             parsed=parse_delta(packet)
             original_pre=decode_delta(parsed,previous)
             original=postprocess_pixels(original_pre) if frame['type']==2 else original_pre
+            compacted=tuple(compact_node(node) for node in parsed['nodes'])
+            compacted_packet=encode_delta(compacted)
+            if decode_delta(parse_delta(compacted_packet),previous)!=original_pre:raise KhcomError('movie_compaction','Compactação alterou pixels.',frame=index)
+            replacement[index]=compacted_packet
+            lossless_savings+=len(packet)-len(compacted_packet)
+            parsed={**parsed,'nodes':compacted}
         if index>=FIRST:
             desired=(original if frame['type']==0 else original_pre)[:]
             # The original subtitle fades in with the logo over ten frames.
@@ -110,7 +116,8 @@ def build_opening_title_probe(data: bytes) -> tuple[bytes,dict]:
     if len(target)!=len(data) or asset[pb:]!=raw[pb:]:raise KhcomError('movie_title_identity','Áudio, cauda ou tamanho alterado.')
     report={'schema':'khcom-opening-raster-title-probe-v1','source_sha256':sha256(data),'target_sha256':sha256(target),
             'movie_symbol':movie['symbol'],'movie_span':movie['span'],'art':art,'frame_range':[FIRST,LAST],
-            'source_segment_bytes':source_total,'encoded_segment_bytes':encoded_total,'owned_packet_padding_bytes':source_total-encoded_total,
+            'source_rebuilt_packets_bytes':source_total,'encoded_rebuilt_packets_bytes':encoded_total,'owned_packet_padding_bytes':source_total-encoded_total,
+            'original_lossless_compaction_savings_bytes':lossless_savings,'rebuilt_packet_count':len(replacement),
             'decode_buffer_limit':video['decode_buffer_maximum'],'maximum_encoded_frame':max(c['encoded_bytes'] for c in changes),
             'audio_and_tail_identical':True,'frame_count_and_fps_identical':True,'all_other_movie_resources_identical':True,
             'changes':changes,'status':'candidate_requires_independent_runtime_visual_verification'}

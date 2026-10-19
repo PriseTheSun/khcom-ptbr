@@ -68,11 +68,22 @@ jobs:
         run: |
           $compiler = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           if (-not (Test-Path $compiler)) { throw "Inno Setup ausente" }
-          $version = (Get-Item $compiler).VersionInfo.FileVersion
-          if ($version -notmatch '^6\.7\.1(?:\.|$)') { throw "Inno Setup inesperado: $version" }
-          & $compiler "/DPayload=$pwd/dist/desktop/payload" "/DOutput=$pwd/dist/desktop" packaging/windows.iss
-          if ($LASTEXITCODE -ne 0) { throw "Falha no instalador" }
-          Get-FileHash dist/desktop/*setup.exe -Algorithm SHA256
+          # ISCC.exe is a thin loader and reports FileVersion 0.0.0.0.
+          # Bind the version emitted by the compiler engine it actually loads.
+          $compilerOutput = & $compiler "/DPayload=$pwd/dist/desktop/payload" "/DOutput=$pwd/dist/desktop" packaging/windows.iss 2>&1
+          $compilerExit = $LASTEXITCODE
+          $compilerOutput | Write-Output
+          if ($compilerExit -ne 0) { throw "Falha no instalador" }
+          $versionLines = @($compilerOutput | ForEach-Object { "$_" } | Where-Object { $_ -match '^Compiler engine version:' })
+          if ($versionLines.Count -ne 1 -or $versionLines[0] -notmatch '^Compiler engine version: .+ 6\.7\.1(?:\s.*)?$') {
+            throw "Identidade inesperada do compilador Inno Setup: $versionLines"
+          }
+          $installer = Get-Item dist/desktop/*setup.exe
+          @{ schema_version = 1; compiler_engine = $versionLines[0];
+             compiler_loader_sha256 = (Get-FileHash $compiler -Algorithm SHA256).Hash.ToLower();
+             installer_sha256 = (Get-FileHash $installer.FullName -Algorithm SHA256).Hash.ToLower();
+             installer_size = $installer.Length; clean_install_verified = $false } |
+            ConvertTo-Json | Set-Content -Encoding utf8 dist/desktop/installer-build.json
       - name: Audit closed package allowlist
         run: python tools/audit_package.py --package dist/desktop/payload --report dist/desktop/rechecked-audit.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

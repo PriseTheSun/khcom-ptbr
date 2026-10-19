@@ -18,6 +18,35 @@ from .text import ROM_BASE
 from .upstream import load_assetgen, sha256
 
 
+def build_credit_probe(data: bytes, *, rom_identity: dict | None = None,
+                       fetch: bool = False) -> tuple[bytes, dict]:
+    """Build the one translated heading proven in both diagnostic endings.
+
+    The font producer stays font-only. This recipe goes through the same
+    occurrence validator and write plan as user-edited catalogs, rather than
+    introducing another string patcher or a permission to edit all credits.
+    """
+    from .text import extract_catalog
+    from .upstream import load_textgen
+    from .validation import plan_translations, apply_translation_plan
+    parser = load_textgen(fetch=fetch)
+    catalog = extract_catalog(data, parser=parser)
+    item_id = "us/staff_roll_script_text/gStaffRollVpGlobalProductionText"
+    matches = [item for item in catalog["items"] if item["id"] == item_id]
+    if (len(matches) != 1 or matches[0]["source_sha256"] !=
+            "bb889c9f7467a26d25e5a35873fb54a57649c04168746dc44c6c4966bdca218d"):
+        raise KhcomError("credits_probe_identity", "Cabeçalho piloto diverge da origem verificada.")
+    matches[0]["translation"] = "@VP, produção global{END}"
+    plan = plan_translations(data, catalog, profile_id=PROFILE_ID,
+                             rom_identity=rom_identity, parser=parser)
+    candidate, report = apply_translation_plan(data, plan)
+    report.update(operation="experimental_translated_credit_probe", recipe_id="credits-heading-ptbr-v1",
+                  edited_ids=[item_id], historical_runtime_evidence="docs/vertical-credit.md")
+    # The historical run is linked, never attributed to this new invocation.
+    report["candidate_runtime_verified"] = False
+    return candidate, report
+
+
 @dataclass(frozen=True)
 class CreditEditContext:
     occurrences: dict[str, list[dict]]

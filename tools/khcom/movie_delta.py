@@ -19,6 +19,19 @@ class Node:
     children: tuple['Node', ...] = ()
 
 
+def compact_node(node:Node) -> Node:
+    """Merge identical lossless operations. Addition is excluded because ARM
+    word carry differs between horizontal pairs and single-column children.
+    """
+    if node.kind=='motion' and node.values==(136,):return Node('copy')
+    if node.kind=='literal' and len(set(node.values))==1:return Node('fill',(node.values[0],))
+    if node.children:
+        children=tuple(compact_node(child) for child in node.children)
+        if children[0]==children[1] and children[0].kind in ('copy','fill','motion'):return children[0]
+        return Node(node.kind,children=children)
+    return node
+
+
 def halves(width: int, height: int, vertical: bool):
     if vertical:
         return ((0, 0, width//2, height), (width//2, 0, width//2, height))
@@ -187,6 +200,8 @@ def keyframe_palette(a,b):
 
 def encode_pixels(pixels: list[int], previous: list[int] | None = None, width=8, height=8) -> Node:
     """Choose a bounded lossless copy/fill/split/literal tree; no motion search."""
+    if width not in (1,2,4,8) or height not in (1,2,4,8) or width*height<2:
+        raise KhcomError('delta_pixel_dimensions','Bloco deve ser uma partição de 8×8 com no mínimo dois pixels.')
     if len(pixels)!=width*height or (previous is not None and len(previous)!=len(pixels)):
         raise KhcomError('delta_pixels', 'Pixels não correspondem ao bloco.')
     memo={}

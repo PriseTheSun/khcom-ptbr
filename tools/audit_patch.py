@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Audita o piloto fixado e emite receita sem bytes de ROM/assets para execução local."""
 import argparse
+from bisect import bisect_right
 import json
 from pathlib import Path
 
@@ -13,27 +14,42 @@ from khcom.upstream import PROJECT_ROOT
 
 def builder_digests():
     paths = sorted((PROJECT_ROOT / "tools/khcom").glob("*.py"))
-    paths += [PROJECT_ROOT / name for name in ("tools/build_demo_package.py", "tools/audit_patch.py", "tools/reconstruct_recipe.py",
-              "manifests/upstream.json", "manifests/rom-us.json", "manifests/relocation-menu-v1.json")]
+    paths += [PROJECT_ROOT / name for name in ("tools/build_demo_package.py", "tools/audit_patch.py", "tools/reconstruct_recipe.py")]
+    paths += sorted((PROJECT_ROOT / "manifests").glob("*.json"))
     return {p.relative_to(PROJECT_ROOT).as_posix(): digest(read_file(p, 4 * 1024 * 1024)) for p in paths}
 
 
-def provenance(literals, components):
+def provenance(literals, components, source=None, target=None):
     spans = sorted((start, end, c["component"]) for c in components for start, end in c["changed_spans"])
     if any(a[1] > b[0] for a, b in zip(spans, spans[1:])):
         raise KhcomError("literal_owner", "Proveniência contém sobreposição.")
+    ends = [row[1] for row in spans]
     result = []
     for literal in literals:
         start, end = literal["target_start"], literal["target_start"] + literal["length"]
-        covered, names = 0, set()
-        for first, last, name in spans:
-            overlap = max(0, min(last, end) - max(first, start))
-            if overlap:
-                covered += overlap
-                names.add(name)
-        if covered != end - start:
-            raise KhcomError("literal_owner", "Literal sem produtor exato.", target_start=start)
-        permitted = names <= {"sora-dialogue", "riku-dialogue", "save-menu-relocation", "opening-subtitles"}
+        covered, names, partitions = 0, set(), []
+        cursor = bisect_right(ends, start)
+        while cursor < len(spans) and spans[cursor][0] < end:
+            first, last, name = spans[cursor]
+            overlap = (max(first, start), min(last, end))
+            covered += overlap[1] - overlap[0]
+            partitions.append(overlap)
+            names.add(name)
+            cursor += 1
+        coalesced = literal.get("coalesced_source_ranges", [])
+        for row in coalesced:
+            first, last = row["source_start"], row["source_start"] + row["length"]
+            if (source is None or target is None or not start <= first < last <= end
+                    or last > min(len(source), len(target)) or source[first:last] != target[first:last]
+                    or digest(source[first:last]) != row["source_sha256"]):
+                raise KhcomError("literal_source_copy", "Proveniência de bytes de origem não confere.")
+            covered += last - first
+            partitions.append((first, last))
+        partitions.sort()
+        if (covered != end - start or not partitions or partitions[0][0] != start or partitions[-1][1] != end
+                or any(a[1] != b[0] for a, b in zip(partitions, partitions[1:]))):
+            raise KhcomError("literal_owner", "Literal sem partição exata de produtores/origem.", target_start=start)
+        permitted = not coalesced and names <= {"sora-dialogue", "riku-dialogue", "save-menu-relocation", "opening-subtitles"}
         result.append({**literal, "components": sorted(names),
                        "provenance": "authored-translation-encoding" if permitted else "local-rom-derived-composition",
                        "public_literal_approved": permitted})
@@ -47,7 +63,7 @@ def main():
     parser.add_argument("--patch", required=True, type=Path)
     parser.add_argument("--recipe-out", required=True, type=Path)
     parser.add_argument("--report", required=True, type=Path)
-    parser.add_argument("--recipe-version", type=int, choices=[1, 2, 3], default=3)
+    parser.add_argument("--recipe-version", type=int, choices=[1, 2, 3, 4], default=4)
     args = parser.parse_args()
     try:
         source = read_rom(args.rom, member=args.member).data
@@ -59,7 +75,7 @@ def main():
         regenerated, proof = create(source, candidate)
         if actual != regenerated or apply(source, actual) != candidate:
             raise KhcomError("literal_recipe", "Este patch não é reproduzido pela receita fixa sem metadados.")
-        literals = provenance(proof["literals"], components)
+        literals = provenance(proof["literals"], components, source, candidate)
         recipe = {"schema_version": 1, "recipe": "khcom-ptbr-pilots", "recipe_version": args.recipe_version,
                   "source_sha256": digest(source), "target_sha256": digest(candidate),
                   "patch_sha256": digest(actual),

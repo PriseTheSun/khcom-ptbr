@@ -4,7 +4,9 @@
 #include <atomic>
 #include <filesystem>
 #include <functional>
+#include <istream>
 #include <nlohmann/json.hpp>
+#include <optional>
 #include <string_view>
 namespace khcom::desktop {
 namespace fs = std::filesystem;
@@ -41,11 +43,19 @@ struct Installed {
   Bytes bytes;
   Json manifest;
 };
+// Non-seekable sources are accepted; the adapter retains ownership of its
+// stream. Limits are bounded by the maximum supported import container (128
+// MiB).
+inline constexpr std::size_t import_limit = 128 * 1024 * 1024;
+Result<Bytes> read_stream(std::istream &, std::size_t limit,
+                          std::optional<std::size_t> expected_size = {});
 Result<Bytes> read_file(const fs::path &, std::size_t limit);
 Result<Success> atomic_write(const fs::path &, std::span<const std::uint8_t>,
                              bool backup = true);
 Result<Bytes> apply_bps(std::span<const std::uint8_t> source,
                         std::span<const std::uint8_t> patch);
+Result<RomImport> import_rom_bytes(Bytes, int member = -1);
+Result<RomImport> import_rom_stream(std::istream &, int member = -1);
 Result<RomImport> import_rom(const fs::path &, int member = -1);
 Result<LoadedConfig> load_config(const fs::path &);
 Result<Success> save_config(const fs::path &, const Config &);
@@ -64,6 +74,8 @@ Result<Bytes> load_save(const fs::path &root, const Json &manifest,
                         int profile);
 Result<Success> store_save(const fs::path &root, const Json &manifest,
                            int profile, std::span<const std::uint8_t>);
+Result<Bytes> encode_save(const Json &manifest, std::span<const std::uint8_t>);
+Result<Bytes> decode_save(std::span<const std::uint8_t>, const Json &manifest);
 Result<Success> export_save(const fs::path &destination, const Json &manifest,
                             std::span<const std::uint8_t>);
 Result<Bytes> import_save(const fs::path &source, const Json &manifest);
