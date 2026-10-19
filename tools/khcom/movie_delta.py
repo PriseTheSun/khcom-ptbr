@@ -159,18 +159,30 @@ def decode_delta(parsed: dict, previous: list[int], *, postprocess=False) -> lis
                     output[target],output[target+1]=word&65535,word>>16
 
     for index,n in enumerate(parsed['nodes']):draw(n,(index%(width//8))*8,(index//(width//8))*8,8,8)
-    if postprocess:
-        for y in range(height):
-            for x in range(8,width,8):
-                i=y*width+x;a,b=output[i-1:i+1]
-                output[i]=(((a&0x7bdf)+(b&0x7bdf))>>1)|(b&0x0420)
-        for y in range(8,height,8):
-            for x in range(0,width,2):
-                i=y*width+x
-                a=output[i-width]|(output[i-width+1]<<16);b=output[i]|(output[i+1]<<16)
-                word=(((a&0x7bdf7bdf)+(b&0x7bdf7bdf))>>1)|(b&0x04200420)
-                output[i],output[i+1]=word&65535,word>>16
+    return postprocess_pixels(output,width,height) if postprocess else output
+
+
+def postprocess_pixels(pixels: list[int],width=240,height=160) -> list[int]:
+    dimensions(width,height)
+    if len(pixels)!=width*height:raise KhcomError('delta_postprocess_size','Frame não corresponde às dimensões.')
+    output=pixels[:]
+    for y in range(height):
+        for x in range(8,width,8):
+            i=y*width+x;a,b=output[i-1:i+1]
+            output[i]=(((a&0x7bdf)+(b&0x7bdf))>>1)|(b&0x0420)
+    for y in range(8,height,8):
+        for x in range(0,width,2):
+            i=y*width+x
+            a=output[i-width]|(output[i-width+1]<<16);b=output[i]|(output[i+1]<<16)
+            word=(((a&0x7bdf7bdf)+(b&0x7bdf7bdf))>>1)|(b&0x04200420)
+            output[i],output[i+1]=word&65535,word>>16
     return output
+
+
+def keyframe_palette(a,b):
+    c=sum(((2*((a>>s)&31)+((b>>s)&31)+1)//3)<<s for s in (0,5,10))
+    d=sum(((((a>>s)&31)+2*((b>>s)&31)+1)//3)<<s for s in (0,5,10))
+    return a,b,c,d
 
 
 def encode_pixels(pixels: list[int], previous: list[int] | None = None, width=8, height=8) -> Node:
@@ -199,6 +211,37 @@ def encode_pixels(pixels: list[int], previous: list[int] | None = None, width=8,
     return solve(0,0,width,height)[1]
 
 
+def node_cost(node:Node,width:int,height:int) -> int:
+    if node.kind=='copy':return 2
+    if node.kind=='motion':return 10
+    if node.kind=='fill':return 19
+    if node.kind=='add':return 26 if width*height==2 else 27
+    if node.kind=='literal':return 35
+    return 2+int(width>1 and height>1)+sum(node_cost(child,w,h) for child,(_,_,w,h) in zip(node.children,halves(width,height,node.kind=='vertical'),strict=True))
+
+
+def replace_delta_pixels(parsed:dict,previous:list[int],desired:list[int]) -> tuple[tuple[Node,...],int]:
+    """Preserve unaffected leaves, including motion references, then minimize
+    only changed subtrees. Rebuilding an entire 8×8 block for a changed 1×2
+    leaf wastes the ROM's bounded packet budget and is intentionally avoided.
+    """
+    width,height=parsed['width'],parsed['height']
+    if len(desired)!=width*height:raise KhcomError('delta_edit_size','Frame desejado não corresponde às dimensões.')
+    decoded=decode_delta(parsed,previous)
+    def block(p,x,y,w,h):return [p[(y+j)*width+x+i] for j in range(h) for i in range(w)]
+    def replace(n,x,y,w,h):
+        target=block(desired,x,y,w,h)
+        if target==block(decoded,x,y,w,h):return n
+        alternative=encode_pixels(target,block(previous,x,y,w,h),w,h)
+        if n.children:
+            children=tuple(replace(child,x+dx,y+dy,a,b) for child,(dx,dy,a,b) in zip(n.children,halves(w,h,n.kind=='vertical'),strict=True))
+            preserved=Node(n.kind,children=children)
+            if node_cost(preserved,w,h)<node_cost(alternative,w,h):return preserved
+        return alternative
+    nodes=tuple(replace(n,i%(width//8)*8,i//(width//8)*8,8,8) for i,n in enumerate(parsed['nodes']))
+    return nodes,sum(a!=b for a,b in zip(nodes,parsed['nodes'],strict=True))
+
+
 def decode_keyframe(packet: bytes, width=240, height=160) -> list[int]:
     dimensions(width,height)
     if width%16 or height%16 or len(packet)!=(width//16)*(height//16)*8:
@@ -208,9 +251,7 @@ def decode_keyframe(packet: bytes, width=240, height=160) -> list[int]:
     for by in range(0,height,16):
         for bx in range(0,width,16):
             a,b,selectors=struct.unpack_from('<HHI',packet,at);at+=8
-            c=sum((((2*((a>>s)&31)+((b>>s)&31)+1)//3))<<s for s in (0,5,10))
-            d=sum((((((a>>s)&31)+2*((b>>s)&31)+1)//3))<<s for s in (0,5,10))
-            palette=(a,b,c,d)
+            palette=keyframe_palette(a,b)
             for i in range(16):output[(by+(i//4)*4)*width+bx+(i%4)*4]=palette[(selectors>>(i*2))&3]
 
     def interpolate(a,b,mask=0x7bdf,rounding=0x420):
@@ -232,3 +273,27 @@ def decode_keyframe(packet: bytes, width=240, height=160) -> list[int]:
         i=(height-4)*width+x
         for d in range(1,4):output[i+width*d:i+width*d+2]=output[i:i+2]
     return output
+
+
+def paint_keyframe_selectors(packet: bytes,pixels: list[int],rectangle,width=240,height=160) -> bytes:
+    """Quantize changed 4×4 anchors against each original keyframe palette.
+
+    Endpoint bytes and all outside selectors remain exact. Interpolation can
+    affect the three pixels preceding a changed anchor, which callers must
+    include in their edit footprint. This is deliberately a lossy keyframe edit.
+    """
+    decode_keyframe(packet,width,height)
+    if len(pixels)!=width*height:raise KhcomError('keyframe_pixels','Frame de edição inválido.')
+    result=bytearray(packet)
+    for by in range(0,height,16):
+        for bx in range(0,width,16):
+            offset=((by//16)*(width//16)+bx//16)*8
+            a,b,selectors=struct.unpack_from('<HHI',packet,offset);palette=keyframe_palette(a,b)
+            for i in range(16):
+                x,y=bx+(i%4)*4,by+(i//4)*4
+                if rectangle[0]<=x<rectangle[2] and rectangle[1]<=y<rectangle[3]:
+                    color=pixels[y*width+x]
+                    chosen=min(range(4),key=lambda v:sum((((palette[v]>>s)&31)-((color>>s)&31))**2 for s in (0,5,10)))
+                    selectors=(selectors&~(3<<(i*2)))|(chosen<<(i*2))
+            struct.pack_into('<I',result,offset+4,selectors)
+    return bytes(result)

@@ -47,8 +47,8 @@ dos pixels originais. O relatório rejeita a distribuição pública desse BPS.
 
 ```sh
 .venv/bin/python tools/audit_patch.py --rom CAMINHO_DA_ROM_OU_ZIP \
-  --patch private/desktop-package-v2/translation.bps \
-  --recipe-out private/new-recipe.json --report private/new-literal-audit.json
+  --patch private/desktop-package-v3/translation.bps \
+  --recipe-version 3 --recipe-out private/new-recipe.json --report private/new-literal-audit.json
 .venv/bin/python tools/reconstruct_recipe.py --rom CAMINHO_DA_ROM_OU_ZIP \
   --recipe private/new-recipe.json --out private/reconstructed-new
 ```
@@ -76,3 +76,10 @@ O workflow `release.yml` confere a origem do run privado e apenas valida o
 candidato. O smoke privado atual não produz um `release-candidate` completo;
 publicação e credenciais continuam pendentes. Nenhum recibo humano foi criado
 em nome do proprietário e nenhuma release completa foi publicada.
+
+A entrada pública `validate_release.py` também foi exercitada com quatro
+candidatos sintéticos: digest alterado, QA ausente, assinatura ausente e
+status experimental. Cada execução retornou o código de erro específico
+esperado (`release_digest`, `release_gates` ou `release_incomplete`), com
+exit 2. Prova: `private/reports/release-cli-negative-v2.json`. Nenhum desses
+recibos sintéticos representa uma pessoa ou um candidato real de publicação.
