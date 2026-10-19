@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Extrai cinco fontes verificadas em PNG privado, sem modificar a ROM."""
+"""Extrai fontes selecionadas ou gráficos conhecidos, sem modificar a ROM."""
 
 import argparse
 import json
@@ -18,12 +18,20 @@ def main() -> int:
     ap.add_argument("--member")
     ap.add_argument("--out", required=True, type=Path, help="Nova pasta dentro de private/")
     ap.add_argument("--fetch-upstream", action="store_true")
+    ap.add_argument("--scope", choices=("fonts", "known"), default="fonts")
     args = ap.parse_args()
     try:
         if args.out.exists() or args.out.is_symlink():
             raise KhcomError("output_exists", "Escolha uma nova pasta de saída.", path=str(args.out))
         rom = read_rom(args.rom, member=args.member)
+        if args.scope == "known":
+            from khcom.graphic_assets import extract_known_graphics
+            report = extract_known_graphics(rom.data, args.out, fetch=args.fetch_upstream, input_origin=rom.identity["input"])
+            print(json.dumps({"ok": True, "output": str(args.out), "resources": len(report["resources"]),
+                              "exact_roundtrips": report["exact_roundtrips"], "complete_graphics_inventory": False}))
+            return 0
         report, files = extract_fonts(rom.data, fetch=args.fetch_upstream)
+        report["input"] = rom.identity["input"]
         for name, content in files.items():
             write_private(args.out / name, content)
         write_private(args.out / "report.json", json_bytes(report))

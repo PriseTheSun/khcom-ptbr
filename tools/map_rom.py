@@ -15,7 +15,7 @@ ROM_BASE = 0x08000000
 MAX_CANDIDATES = 100000
 
 
-def map_regions(data: bytes, catalog: dict) -> dict:
+def map_regions(data: bytes, catalog: dict, asset_inventory: dict | None = None) -> dict:
     known = [
         {"start": 0, "end": 4, "kind": "arm_entry_instruction", "provenance": "GBA header; decoded below"},
         {"start": 4, "end": 192, "kind": "cartridge_header", "provenance": "validated supported ROM header"},
@@ -29,9 +29,14 @@ def map_regions(data: bytes, catalog: dict) -> dict:
                                      "commit": catalog["upstream"]["commit"]}})
         if interval["kind"] == "text":
             targets[ROM_BASE + span["start"]].append(interval["id"])
+    if asset_inventory is not None:
+        from khcom.upstream import sha256
+        if asset_inventory["source_sha256"] != sha256(data):
+            raise KhcomError("map_identity", "Inventário de assets pertence a outra ROM.")
+        known.extend(asset_inventory["assets"])
     regions, cursor = [], 0
     for region in sorted(known, key=lambda item: item["start"]):
-        if region["start"] < cursor or region["end"] > len(data):
+        if region["start"] < cursor or region["end"] < region["start"] or region["end"] > len(data):
             raise KhcomError("map_ownership", "Intervalos conhecidos se sobrepõem ou excedem a ROM.")
         if cursor < region["start"]:
             regions.append({"start": cursor, "end": region["start"], "kind": "unknown", "provenance": None})
@@ -57,6 +62,7 @@ def map_regions(data: bytes, catalog: dict) -> dict:
                 break
     unknown = sum(r["end"] - r["start"] for r in regions if r["kind"] == "unknown")
     return {"schema_version": 1, "origin": catalog["origin"], "regions": regions,
+            "asset_inventory_summary": None if asset_inventory is None else {key: value for key, value in asset_inventory.items() if key != "assets"},
             "unknown_bytes": unknown, "entry_branch": entry,
             "pointer_scan": {"alignment": 4, "byte_order": "little", "examined_bytes": examined,
                              "complete_for_aligned_exact_words": examined == len(data),
@@ -73,11 +79,17 @@ def main():
     parser.add_argument("--member")
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument("--fetch-upstream", action="store_true")
+    parser.add_argument("--include-assets", action="store_true", help="Incluir layouts e registros dos manifests de assets fixados")
     args = parser.parse_args()
     try:
         rom = read_rom(args.rom, member=args.member)
         catalog = extract_catalog(rom.data, fetch=args.fetch_upstream)
-        result = map_regions(rom.data, catalog)
+        assets = None
+        if args.include_assets:
+            from khcom.assets import inventory_assets
+            assets = inventory_assets(rom.data, fetch=args.fetch_upstream)
+        result = map_regions(rom.data, catalog, assets)
+        result["input"] = rom.identity["input"]
         write_private(args.out, json_bytes(result))
         print(json.dumps({"ok": True, "regions": len(result["regions"]),
                           "unknown_bytes": result["unknown_bytes"], "entry": result["entry_branch"],

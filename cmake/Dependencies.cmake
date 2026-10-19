@@ -8,8 +8,15 @@ foreach(dependency mgba sdl)
   if(EXISTS "${local_archive}")
     set(dep_url "${local_archive}")
   endif()
-  FetchContent_Declare(${dependency} URL "${dep_url}"
-    URL_HASH "SHA256=${dep_hash}" DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+  if(dependency STREQUAL "mgba")
+    FetchContent_Declare(${dependency} URL "${dep_url}"
+      URL_HASH "SHA256=${dep_hash}" DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+      PATCH_COMMAND "${CMAKE_COMMAND}" "-DSOURCE_DIR=<SOURCE_DIR>"
+        -P "${CMAKE_CURRENT_LIST_DIR}/PatchMgbaVersion.cmake")
+  else()
+    FetchContent_Declare(${dependency} URL "${dep_url}"
+      URL_HASH "SHA256=${dep_hash}" DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+  endif()
 endforeach()
 
 # Only the software GBA core and memory/file adapters. No GUI, network debug,
@@ -24,6 +31,7 @@ foreach(feature BUILD_QT BUILD_SDL BUILD_LIBRETRO BUILD_OPENEMU BUILD_GL BUILD_G
   set(${feature} OFF CACHE BOOL "" FORCE)
 endforeach()
 FetchContent_MakeAvailable(mgba)
+string(JSON KHCOM_PINNED_CORE_VERSION GET "${KHCOM_DEPENDENCIES}" sources mgba version)
 
 set(SDL_SHARED OFF CACHE BOOL "" FORCE)
 set(SDL_STATIC ON CACHE BOOL "" FORCE)
@@ -48,3 +56,4 @@ foreach(dependency mgba sdl)
   endforeach()
 endforeach()
 file(APPEND "${notices}" "\nmGBA src/util/hash.c: MurmurHash3 was written by Austin Appleby and placed in the public domain.\n")
+file(APPEND "${notices}" "\nLocal build-only modification: cmake/PatchMgbaVersion.cmake forwards SKIP_GIT=ON to mGBA's version-info generator; emulation sources are unchanged.\n")

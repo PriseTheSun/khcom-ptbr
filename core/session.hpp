@@ -25,6 +25,9 @@ public:
   Session& operator=(const Session&) = delete;
   Result<Success> advance(std::uint16_t keys);
   Result<std::vector<std::uint8_t>> save() const;
+  // Diagnostic CPU/RAM checkpoint only; cartridge data remains a separate save.
+  Result<std::vector<std::uint8_t>> checkpoint() const;
+  Result<Success> restore_checkpoint(std::span<const std::uint8_t> bytes);
   SaveInfo save_info() const;
   std::span<const std::uint32_t> pixels() const { return pixels_; }
   std::span<const std::uint8_t> rom() const { return rom_; }
@@ -40,6 +43,7 @@ private:
   bool config_initialized_ = false;
   bool crashed_ = false;
   std::vector<std::uint8_t> rom_;
+  std::string initial_save_digest_;
   std::vector<std::uint32_t> pixels_;
   AudioStats audio_;
 };

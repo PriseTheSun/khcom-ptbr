@@ -44,6 +44,18 @@ class StagingTests(unittest.TestCase):
                 stage(root, Path(temporary) / "out")
             self.assertEqual("stage_symlink", caught.exception.code)
 
+    def test_nested_workflow_area_rejects_symlink_ancestor(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "project"
+            root.mkdir()
+            outside = Path(temporary) / "private"
+            (outside / "workflows").mkdir(parents=True)
+            (outside / "workflows" / "ci.yml").write_text("private")
+            (root / ".github").symlink_to(outside, target_is_directory=True)
+            with self.assertRaises(KhcomError) as caught:
+                stage(root, Path(temporary) / "out")
+            self.assertEqual("stage_symlink", caught.exception.code)
+
 
 if __name__ == "__main__":
     unittest.main()

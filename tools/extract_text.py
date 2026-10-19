@@ -21,6 +21,7 @@ def main() -> int:
     try:
         rom = read_rom(args.rom, member=args.member)
         catalog = extract_catalog(rom.data, fetch=args.fetch_upstream)
+        catalog["input"] = rom.identity["input"]
         write_private(args.out, json_bytes(catalog))
         print(json.dumps({"ok": True, "output": str(args.out), **sanitized_summary(catalog)}, ensure_ascii=False, indent=2))
         return 0

@@ -119,10 +119,30 @@ def load_textgen(*, fetch: bool = False, snapshot: Path = SNAPSHOT) -> ModuleTyp
     return _load_module("textgen", verify_upstream(fetch=fetch, snapshot=snapshot), snapshot)
 
 
+def read_source(name: str, *, manifest: dict | None = None, snapshot: Path = SNAPSHOT) -> bytes:
+    """Return the verified bytes of one pinned source, including on rereads."""
+    manifest = manifest or verify_upstream(snapshot=snapshot)
+    expected = next((item for item in manifest["files"] if item["path"] == name), None)
+    if expected is None:
+        raise KhcomError("upstream_source", "Fonte não consta do manifesto fixado.", path=name)
+    content = read_file(snapshot / name, expected["size"])
+    if len(content) != expected["size"] or sha256(content) != expected["sha256"]:
+        raise KhcomError("upstream_integrity", "Fonte alterada durante a leitura.", path=name)
+    return content
+
+
 def load_assetgen(*, fetch: bool = False, snapshot: Path = SNAPSHOT) -> ModuleType:
     manifest = verify_upstream(fetch=fetch, snapshot=snapshot)
     siblings = {name: _load_module(name, manifest, snapshot) for name in ("sprite_sheet", "m4a_assets")}
     return _load_module("assetgen", manifest, snapshot, siblings)
+
+
+def load_asset_manifests(*, fetch: bool = False) -> tuple[ModuleType, list]:
+    """The pinned acquisition owner selects the complete declared asset set."""
+    owner = load_assetgen(fetch=fetch)
+    paths = sorted(item["path"] for item in read_manifest()["files"]
+                   if item["path"].startswith("config/assets/") and item["path"].endswith(".yaml"))
+    return owner, [owner.Manifest(SNAPSHOT / path) for path in paths]
 
 
 def upstream_rom_identity(snapshot: Path = SNAPSHOT) -> dict:

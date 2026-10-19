@@ -28,6 +28,8 @@ std::vector<std::uint8_t> fixture() {
 }
 int main() {
   try {
+    require(std::string(khcom::Session::core_version())==KHCOM_PINNED_CORE_VERSION,
+            "Core build identity must match the pinned dependency, never the enclosing Git repository");
     require(khcom::sha256({})=="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","SHA256 empty vector");
     const std::vector<std::uint8_t> abc={'a','b','c'};
     require(khcom::sha256(abc)=="ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad","SHA256 abc vector");
@@ -47,9 +49,22 @@ int main() {
     take(reload->advance(1|256));
     auto pressed=take(reload->save());
     require(pressed[2]==0xfe&&pressed[3]==0x02,"A/R input reaches emulated KEYINPUT");
+    auto checkpoint=take(reload->checkpoint());
+    auto resumed=take(khcom::Session::create(rom,pressed));
+    take(resumed->restore_checkpoint(checkpoint));
+    require(resumed->frames()==reload->frames(),"Checkpoint retains emulated frame count");
+    take(reload->advance(2));take(resumed->advance(2));
+    require(take(reload->save())==take(resumed->save()),"Checkpoint and cartridge pairing resumes authored fixture");
+    auto corrupted=checkpoint;corrupted.back()^=1;
+    require(std::holds_alternative<khcom::Error>(resumed->restore_checkpoint(corrupted)),"Corrupt checkpoint rejected");
+    auto foreign=rom;foreign.back()^=1;auto other=take(khcom::Session::create(foreign));
+    require(std::holds_alternative<khcom::Error>(other->restore_checkpoint(checkpoint)),"Foreign ROM checkpoint rejected");
+    auto mismatched=take(khcom::Session::create(rom,save));
+    require(std::holds_alternative<khcom::Error>(mismatched->restore_checkpoint(checkpoint)),"Mismatched cartridge save rejected");
+    require(std::holds_alternative<khcom::Error>(resumed->restore_checkpoint({})),"Truncated checkpoint rejected");
     require(khcom::sha256(session->rom())==digest,"Immutable ROM buffer");
     require(std::holds_alternative<khcom::Error>(session->advance(0x400)),"Reject unsupported key bits");
-    std::cout<<"SHA256, authored ARM framebuffer, input guard, SRAM serialization/reload passed.\n"
+    std::cout<<"SHA256, authored ARM framebuffer, input guard, SRAM reload and diagnostic checkpoint contracts passed.\n"
       "These synthetic checks do not establish KHCoM gameplay or in-game save compatibility.\n";
     return 0;
   } catch(const std::exception& e) {std::cerr<<e.what()<<'\n';return 1;}

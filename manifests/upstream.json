@@ -160,6 +160,386 @@
       "path": "include/msg/text_types.h",
       "size": 579,
       "sha256": "ae005a6b86e2c05a43fa1fb679c5e7213d7b4449f47f6d9d3e91935ba5083864"
+    },
+    {
+      "path": "src/sroll/sroll_tmr.c",
+      "size": 35536,
+      "sha256": "578f44f092769fefc534c987edc44d351126f21d7dcc994defcdce1f6d603a80"
+    },
+    {
+      "path": "src/card/card_deckmenu2.c",
+      "size": 238902,
+      "sha256": "a47c7917f35da3d9af3014959621eba1b66b7e82d733c9a31c28a1b1e5eae8a1"
+    },
+    {
+      "path": "src/card/card_deckmenu2_riku.c",
+      "size": 34435,
+      "sha256": "9a219f70dc9760e6715631e047e463ae11f5ae7c740ca7862efcf4c16bd9e6f5"
+    },
+    {
+      "path": "config/assets/battle_backgrounds.yaml",
+      "size": 12078,
+      "sha256": "f9eb8537bc59694587bc40d2ca0e525371d82ac2d147c615ec2495fa243bb16a"
+    },
+    {
+      "path": "config/assets/battle_bg_animations.yaml",
+      "size": 50536,
+      "sha256": "5ec98d07d64a4ac0a905b2f23095f74850e3649ed05796249cdbf6c6b063d237"
+    },
+    {
+      "path": "config/assets/copyright_screens.yaml",
+      "size": 3594,
+      "sha256": "c66c4673f3d63d13e14a4a5abd9c71a363d29afdc6f5c305fb90e94a530cea08"
+    },
+    {
+      "path": "config/assets/debug_font.yaml",
+      "size": 1459,
+      "sha256": "de7ab75de2b97f4dfb9b0c5adc5d8547167d3646b78de5c969e94ed519897078"
+    },
+    {
+      "path": "config/assets/default_bg_map.yaml",
+      "size": 557,
+      "sha256": "42eb64e7b205205c41c999e939b61e36947926c05a1ebf37268e741f13f79dc7"
+    },
+    {
+      "path": "config/assets/event_backgrounds.yaml",
+      "size": 275433,
+      "sha256": "579c57b684c82885ccc1fcd439ad60675e3b3fcb0adec5df29646d5636d9932e"
+    },
+    {
+      "path": "config/assets/jiminy_journal.yaml",
+      "size": 19005,
+      "sha256": "234b361704d9a34df4f704dffae9ddada2955a46e006281284f28db93aac1632"
+    },
+    {
+      "path": "config/assets/link_menus.yaml",
+      "size": 6067,
+      "sha256": "78d203ceb591e474aa849645244f723efe163bac5c6d0f247c7ebeb08cf94977"
+    },
+    {
+      "path": "config/assets/m4a_songs.yaml",
+      "size": 181950,
+      "sha256": "34da54d83e9b067106f2f2d555b3a366719084f1e8bf44959788036a7c169148"
+    },
+    {
+      "path": "config/assets/m4a_voicegroups.yaml",
+      "size": 8085,
+      "sha256": "01c9f9feaeaeb0b44bd3948c26e4b4861b52c9b9a5a14db9c7e696f61883c068"
+    },
+    {
+      "path": "config/assets/map_check_worlds.yaml",
+      "size": 3721,
+      "sha256": "cecfcebfad1f791493783818433bbeefb9f2291f50cafe165fcb2c2bd482c495"
+    },
+    {
+      "path": "config/assets/map_room_tables.yaml",
+      "size": 39656,
+      "sha256": "69a3dd5db08c4fb891e3a662c85eb149c1359a194e4cd9a2a4efe9b1ef58bfc4"
+    },
+    {
+      "path": "config/assets/map_rooms.yaml",
+      "size": 323931,
+      "sha256": "7ed09f29f2f514c9e735ecfaba866a7f9a6fe2339720e253a4dbf0808d9db8b9"
+    },
+    {
+      "path": "config/assets/map_tile_animations.yaml",
+      "size": 3149,
+      "sha256": "f8f62ab25c50865d7dbd4ac294bb2ef93ddfa8070ea595dc39022ae1484a9a31"
+    },
+    {
+      "path": "config/assets/movies.yaml",
+      "size": 1138,
+      "sha256": "9fd0053733d1a0e29fc0bbfe9cae56abe3382327c19a649050fc522f7fdcfe78"
+    },
+    {
+      "path": "config/assets/premium_card_effect.yaml",
+      "size": 678,
+      "sha256": "001e0f489feccf70f4d74bfa278def89d8919d21f65ab25c8436e503d2a2e1ff"
+    },
+    {
+      "path": "config/assets/prize_card.yaml",
+      "size": 1085,
+      "sha256": "1de5f5cbd6d69d4648ce08aaf47541e57939b2e39bed9b8e8b4894996ced2b5e"
+    },
+    {
+      "path": "config/assets/rodata_end_fill.yaml",
+      "size": 480,
+      "sha256": "ab00e785be3fdba9aa3064526b41121ca98b74022b8538a0635bb4b31a799e50"
+    },
+    {
+      "path": "config/assets/romcri_backgrounds.yaml",
+      "size": 8637,
+      "sha256": "71a83e1b3a9252e4dc08aa172088e710946bc49ac08376a53b561b077585ade8"
+    },
+    {
+      "path": "config/assets/sprite_palettes.yaml",
+      "size": 130391,
+      "sha256": "32af08b5fe76d69319f83ac8404b5b509fb22c15ccd195922aacd8fed187d58c"
+    },
+    {
+      "path": "config/assets/sprites_allmap.yaml",
+      "size": 26882,
+      "sha256": "3f5ae234922a6e740d728724ebae5c85081703aed3726f092865d3b0a42a9a64"
+    },
+    {
+      "path": "config/assets/sprites_bos2.yaml",
+      "size": 73843,
+      "sha256": "69fcd1f55963161de983ee1b3b1d77fb7e5c21aae60d99ada094302d91b70e8c"
+    },
+    {
+      "path": "config/assets/sprites_bos4.yaml",
+      "size": 24987,
+      "sha256": "1f7d6352e371e11ae1e6693400483dfb4410ff030f5a9ba2188b2a4dcecb1e90"
+    },
+    {
+      "path": "config/assets/sprites_bos5.yaml",
+      "size": 30997,
+      "sha256": "374c674b10bfb44ea509933d47a7465b8d74bf156bae603dfcd5780dc0aab1eb"
+    },
+    {
+      "path": "config/assets/sprites_bos6.yaml",
+      "size": 93375,
+      "sha256": "684eb3740c93c8a6c610f6b453b095695e68d4dafda9045cdff39c7bc3b8f6e0"
+    },
+    {
+      "path": "config/assets/sprites_bos7.yaml",
+      "size": 16257,
+      "sha256": "e4babfbddf25534d4db05bdb58d636ac9c8463ceebbb90dac5e1b1e0e7a174e5"
+    },
+    {
+      "path": "config/assets/sprites_boss_tm.yaml",
+      "size": 48999,
+      "sha256": "34977498bf814b89f1dcb72d496f2088b49bd20fac67fb4de70ebd8e2de4ede4"
+    },
+    {
+      "path": "config/assets/sprites_btl.yaml",
+      "size": 61327,
+      "sha256": "dd04a12a44158958c2ed2a01f2e44b9ee0bd24806a9ad5cd345d349b2f314408"
+    },
+    {
+      "path": "config/assets/sprites_btl_hud.yaml",
+      "size": 35770,
+      "sha256": "a271039a841f2a7307e14db96829ec359fa2339d27138d45ff91fa83ba3f590b"
+    },
+    {
+      "path": "config/assets/sprites_card.yaml",
+      "size": 173633,
+      "sha256": "2d4976395836c60636093a5d4e30ab662a7cd9ab1b0a2b4e8fd1eed9da4848e7"
+    },
+    {
+      "path": "config/assets/sprites_card_pictures.yaml",
+      "size": 412842,
+      "sha256": "69cd247d8cb8ba56f9c061e9c95104735397a77913a5e05558b35308eac9b7b6"
+    },
+    {
+      "path": "config/assets/sprites_cloud.yaml",
+      "size": 13770,
+      "sha256": "c6fbee73973331ec1c231673d5f834dc2ed850e0efcd4b34149a48e6fa5a993a"
+    },
+    {
+      "path": "config/assets/sprites_continue.yaml",
+      "size": 9813,
+      "sha256": "debdcc6199c4528acec25f6d96224ceec28a8b2cac4b2ca14ddaf4e166c4a4ad"
+    },
+    {
+      "path": "config/assets/sprites_deck_menu.yaml",
+      "size": 42702,
+      "sha256": "5816967b79b1cd48223d9b0d01c74709037527742f282a408d1b1f843825015c"
+    },
+    {
+      "path": "config/assets/sprites_emy.yaml",
+      "size": 321720,
+      "sha256": "9330983bd4c8a702590523a3b83e17f285bcc573ae1182b0f50cd13fc3691d7d"
+    },
+    {
+      "path": "config/assets/sprites_evt.yaml",
+      "size": 634564,
+      "sha256": "301fc595833e38d75c2d8c410a9383329b75d5f4f8431ee82c03c2f34c1dce10"
+    },
+    {
+      "path": "config/assets/sprites_fld.yaml",
+      "size": 91632,
+      "sha256": "504777c7a1b1ebde0754d9a9e42700182c9a68ae70f3e8e16519e3e6d243ac02"
+    },
+    {
+      "path": "config/assets/sprites_frd.yaml",
+      "size": 20989,
+      "sha256": "f0ebff254c936184b49012ac8ebbf0fc3f6ece460286640630a893d230ff8e91"
+    },
+    {
+      "path": "config/assets/sprites_hum.yaml",
+      "size": 233063,
+      "sha256": "f506bdbbc18ffcdaa3cd47c4ab92669d1dacc5ca2811fe8740075e11934640f1"
+    },
+    {
+      "path": "config/assets/sprites_language_select.yaml",
+      "size": 3065,
+      "sha256": "eaf05b7844207430d96662525d16b74f98d447dcb5895c2fc1d29691b962640a"
+    },
+    {
+      "path": "config/assets/sprites_level_up.yaml",
+      "size": 52617,
+      "sha256": "97f15fe5938e785b9f49cc8c62f9b9b4beb6fa4fd2f2faa4ab1f85f250789155"
+    },
+    {
+      "path": "config/assets/sprites_map.yaml",
+      "size": 305133,
+      "sha256": "7aa1feb1af9985ee57f5c1c33a9c8a4b09e445c76aa7cd2d25a0a49a9b67e0fb"
+    },
+    {
+      "path": "config/assets/sprites_map_tasks.yaml",
+      "size": 49767,
+      "sha256": "f9f80a62d5776067ee149f6aa6e78060f3d59a7b59bc310943ed5cf7fce4ca09"
+    },
+    {
+      "path": "config/assets/sprites_mode_debug.yaml",
+      "size": 4314,
+      "sha256": "0966b3987aa3e3315c3b6c47aa369a5f6d116da8a2c3ca0dbd8dcaf062b51f95"
+    },
+    {
+      "path": "config/assets/sprites_mode_test.yaml",
+      "size": 4360,
+      "sha256": "8a476eaee506b52a3ff2e25c01405a590a5db98d3e019fe6572de9e0adf974b5"
+    },
+    {
+      "path": "config/assets/sprites_moogle_shop.yaml",
+      "size": 40463,
+      "sha256": "1b69f209d12c444322ce60508537c82c070a6cf3fdd14b1b2e90611e15d27acd"
+    },
+    {
+      "path": "config/assets/sprites_number_plus.yaml",
+      "size": 1403,
+      "sha256": "01a5acbd0c054a32a61e20d3df3ba2241c70d746ab105c3e74f62c6bce117e05"
+    },
+    {
+      "path": "config/assets/sprites_pooh.yaml",
+      "size": 182476,
+      "sha256": "f046d7b221bf35c8fe7aa453ee981a03c569553dacf575dc6e76a475370068d8"
+    },
+    {
+      "path": "config/assets/sprites_premire_chance.yaml",
+      "size": 3026,
+      "sha256": "ecf42849de4f6bbb30a371bc6d777681fa010935486ab7260f353ab50260aba8"
+    },
+    {
+      "path": "config/assets/sprites_riku.yaml",
+      "size": 22976,
+      "sha256": "8bd272bb7b5d46c3e6816850e9f642bf25a1c03ed8087aa2ff4bee1ca0c4c90a"
+    },
+    {
+      "path": "config/assets/sprites_room.yaml",
+      "size": 12721,
+      "sha256": "d6967f8ef2b679c0a1487f3c1b8a84bdadb7bc528874d713cd65aff338c8e45c"
+    },
+    {
+      "path": "config/assets/sprites_smn.yaml",
+      "size": 13443,
+      "sha256": "253ab5e3649d0a16435cc2c24260aafc3ab6874dd14a1a30f3a0db8c76f08229"
+    },
+    {
+      "path": "config/assets/sprites_sora.yaml",
+      "size": 47560,
+      "sha256": "f633738fa67f704fd7f746a81a43f406a5809fc2d307640e1ce9175efba0f7c3"
+    },
+    {
+      "path": "config/assets/sprites_staff_roll.yaml",
+      "size": 763978,
+      "sha256": "3fd0609fe24f2b4488f8e648c52ad86e33c72802631e7bfc8966c150fcc8b93e"
+    },
+    {
+      "path": "config/assets/sprites_status.yaml",
+      "size": 21301,
+      "sha256": "cdd6e2515e218172332359c3e3b5ecb9d59237e9300ac9f11dcf9c8bb06aad3b"
+    },
+    {
+      "path": "config/assets/sprites_title.yaml",
+      "size": 66483,
+      "sha256": "5c6711b4810ad20520b08b6a1861defc7a9f738e38f865e01e7275a9c6e6dbe2"
+    },
+    {
+      "path": "config/assets/sprites_wlogo.yaml",
+      "size": 42425,
+      "sha256": "9b36369464d6b8f4c8480cb4e898cb30c6c662d735b213812c863ab522ad146d"
+    },
+    {
+      "path": "config/assets/sprites_worldinspect.yaml",
+      "size": 121214,
+      "sha256": "43e0ff79e4713ea255df0ba76490e063bbdbb06825a6f43ed250759740f40975"
+    },
+    {
+      "path": "config/assets/sprites_worldselect.yaml",
+      "size": 25197,
+      "sha256": "b3fb3de6da08f61ca87f9aeeb8cbd11c611b009aa508495ec904cb3ccd60ca1d"
+    },
+    {
+      "path": "config/assets/sram_error_screen.yaml",
+      "size": 858,
+      "sha256": "7d61ec04fdf60827e4f73929fe36cade8ba3095afa6b722fdb979d29261b09d4"
+    },
+    {
+      "path": "config/assets/staff_roll_audio.yaml",
+      "size": 715,
+      "sha256": "53a7ecd42c71d077362fa67920b2a4fdc65479f4f50f76d6aac53d36144f7295"
+    },
+    {
+      "path": "config/assets/tutorial_deck.yaml",
+      "size": 1359,
+      "sha256": "51a78e9d6a38ef3d8865946eb11034ecbc6e5011411a40df0a9feefc1429347e"
+    },
+    {
+      "path": "config/us/named_funcs.cfg",
+      "size": 45160,
+      "sha256": "f57d9a45045c41deb2d51921fa248eef002b93cfa84ffa085f0c0d0a7361c53e"
+    },
+    {
+      "path": "config/us/symbols.txt",
+      "size": 193,
+      "sha256": "9c237171b836574dd59c7b1492849f4c112256037f9e65ab14c4ff171dd00cad"
+    },
+    {
+      "path": "config/us/units.txt",
+      "size": 9562,
+      "sha256": "771e996254244833876ae9a0abb6963dddf8544b4ce9f72528e383b22412a70b"
+    },
+    {
+      "path": "src/main.c",
+      "size": 7859,
+      "sha256": "d29ce7f88971d17130337d322443a35ec630fd47541af3b3b211e319413adc60"
+    },
+    {
+      "path": "src/mode.c",
+      "size": 6667,
+      "sha256": "72c1f7a8e60efa41f59e1d3df7668c49853b79d3735125b563031e50e9ac5fb5"
+    },
+    {
+      "path": "include/mode.h",
+      "size": 1038,
+      "sha256": "0671ec3dd735550756eaf4b3c5afbb3d8b52c654911f44fc9f047e11f5308dfd"
+    },
+    {
+      "path": "include/game_state.h",
+      "size": 2736,
+      "sha256": "c28dee580a8845d5a6b7317cffd9b89489c4f4fab8493c3ade58b1492f54355e"
+    },
+    {
+      "path": "include/system_state.h",
+      "size": 1965,
+      "sha256": "9285d1c2970f89ac0abd2714dbbbaf9205a97a2f48dcfc3740cf1ff883a04605"
+    },
+    {
+      "path": "src/evt/mode_movie.c",
+      "size": 29039,
+      "sha256": "0474818da2285ecdf7d75242bfa6aae1a5370455e1a087402515a85d9b0234d1"
+    },
+    {
+      "path": "include/evt/mode_movie.h",
+      "size": 700,
+      "sha256": "410adc927ea98034ee36f186ec2cebc02ecaf36d9b62e89b9632119f9095b238"
+    },
+    {
+      "path": "src/title/mode_title.c",
+      "size": 12440,
+      "sha256": "0fbfe04ec9e0134b008b6371ee6b18ad0e370f5b9c1e1f9e97fef292bae50251"
     }
   ]
 }

@@ -19,7 +19,7 @@ Result<std::unique_ptr<Preview>> Preview::create(unsigned scale) {
   self->impl_=std::make_unique<Impl>();
   if(!SDL_Init(SDL_INIT_VIDEO)) return Error{"sdl_initialization",SDL_GetError()};
   auto& i=*self->impl_;
-  i.window=SDL_CreateWindow("KHCoM — diagnóstico original (sem tradução)",240*scale,160*scale,0);
+  i.window=SDL_CreateWindow("KHCoM — diagnóstico",240*scale,160*scale,0);
   if(!i.window) return Error{"sdl_window",SDL_GetError()};
   i.renderer=SDL_CreateRenderer(i.window,nullptr);
   if(!i.renderer) return Error{"sdl_renderer",SDL_GetError()};

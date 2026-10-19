@@ -24,10 +24,10 @@ struct LogStats {
   std::vector<std::string> game_error_examples;
 } logs;
 struct Options {
-  fs::path rom, output, trace, save;
+  fs::path rom, output, trace, save, checkpoint;
   std::string expected=original_sha256;
   unsigned frames=600, capture=0, scale=3;
-  bool preview=false, realtime=false;
+  bool preview=false, realtime=false, checkpoint_out=false;
 };
 std::string path_text(const fs::path& path) {
   const auto utf8=path.u8string();return {utf8.begin(),utf8.end()};
@@ -56,12 +56,14 @@ Result<Options> parse(int argc,char** argv) {
     std::string name=argv[i];
     if(name=="--preview") {o.preview=true;continue;}
     if(name=="--realtime") {o.realtime=true;continue;}
+    if(name=="--checkpoint-out") {o.checkpoint_out=true;continue;}
     if(i+1==argc) return Error{"missing_argument","Valor ausente: "+name};
     std::string value=argv[++i];
     if(name=="--rom") o.rom=fs::u8path(value);
     else if(name=="--output-dir") o.output=fs::u8path(value);
     else if(name=="--input-trace") o.trace=fs::u8path(value);
     else if(name=="--save-in") o.save=fs::u8path(value);
+    else if(name=="--checkpoint-in") o.checkpoint=fs::u8path(value);
     else if(name=="--expect-sha256") o.expected=value;
     else if(name=="--frames"||name=="--capture-every"||name=="--scale") {
       auto n=number(value);if(auto* e=std::get_if<Error>(&n)) return *e;
@@ -71,6 +73,7 @@ Result<Options> parse(int argc,char** argv) {
     } else return Error{"unknown_argument","Opção desconhecida: "+name};
   }
   if(o.rom.empty()||o.output.empty()) return Error{"missing_argument","Informe --rom e --output-dir."};
+  if(!o.checkpoint.empty()&&o.save.empty()) return Error{"checkpoint_save_required","Checkpoint exige --save-in do mesmo ponto; não substitui o save de cartucho."};
   if(o.frames==0||o.frames>10'000'000) return Error{"invalid_frames","Informe entre 1 e 10000000 frames por execução."};
   constexpr std::uint64_t capture_bytes=240*160*3+15;
   if(o.capture&&std::uint64_t((o.frames-1)/o.capture+1)*capture_bytes>1024ULL*1024*1024)
@@ -173,6 +176,7 @@ int run(int argc,char** argv) {
     std::cout<<"KHCoM M1 diagnostic; inspect supplied ROM translation separately; no release packaging.\n"
       "--rom FILE --output-dir NEW_DIRECTORY [--frames 600] [--input-trace CSV]\n"
       "[--save-in FILE] [--capture-every N] [--preview] [--scale 1..6] [--realtime]\n"
+      "[--checkpoint-out] [--checkpoint-in FILE (requires matching --save-in)]\n"
       "[--expect-sha256 DIGEST] (default: original USA B8CE revision 0)\n"
       "Trace: frame,keys decimal, zero-based frame before execution. Masks:\n"
       "A=1 B=2 Select=4 Start=8 Right=16 Left=32 Up=64 Down=128 R=256 L=512.\n";
@@ -188,6 +192,11 @@ int run(int argc,char** argv) {
   if(!o.save.empty()) {auto r=read(o.save,128*1024);if(auto* e=std::get_if<Error>(&r)) return fail(*e);save=std::move(std::get<std::vector<std::uint8_t>>(r));}
   auto created=khcom::Session::create(std::move(rom),save);if(auto* e=std::get_if<Error>(&created)) return fail(*e);
   auto session=std::move(std::get<std::unique_ptr<khcom::Session>>(created));
+  if(!o.checkpoint.empty()) {
+    auto c=read(o.checkpoint,2*1024*1024);if(auto* e=std::get_if<Error>(&c)) return fail(*e);
+    auto r=session->restore_checkpoint(std::get<std::vector<std::uint8_t>>(c));if(auto* e=std::get_if<Error>(&r)) return fail(*e);
+  }
+  const auto initial_core_frame_count=session->frames();
   std::error_code ec;
   if(!fs::create_directory(o.output,ec)) return fail({"output_directory","Destino deve ser uma pasta nova com pai existente: "+path_text(o.output)+" ("+ec.message()+")"});
   std::unique_ptr<khcom::Preview> preview;
@@ -214,6 +223,10 @@ int run(int argc,char** argv) {
   auto snapshot=session->save();if(auto* e=std::get_if<Error>(&snapshot)) return fail(*e);
   const auto& saved=std::get<std::vector<std::uint8_t>>(snapshot);
   if(!saved.empty()) {auto r=write(o.output/"cartridge.sav",saved);if(auto* e=std::get_if<Error>(&r)) return fail(*e);}
+  if(o.checkpoint_out) {
+    auto c=session->checkpoint();if(auto* e=std::get_if<Error>(&c)) return fail(*e);
+    auto r=write(o.output/"checkpoint.bin",std::get<std::vector<std::uint8_t>>(c));if(auto* e=std::get_if<Error>(&r)) return fail(*e);
+  }
   const auto info=session->save_info();const auto& a=session->audio();std::ostringstream report;
   report<<std::boolalpha<<"{\n  \"schema_version\": 1,\n  \"ok\": true,\n  \"kind\": \"runtime_diagnostic\",\n"
     "  \"harness_version\": "<<quote(KHCOM_DIAGNOSTIC_VERSION)<<",\n  \"core_version\": "<<quote(session->core_version())
@@ -221,6 +234,7 @@ int run(int argc,char** argv) {
     <<",\n  \"bios\": \"mGBA built-in substitute; startup skipped; no external BIOS\",\n  \"source_sha256\": "<<quote(source_hash)
     <<",\n  \"inputs\": {\"rom_path\": "<<quote(path_text(o.rom))<<", \"trace_path\": "<<quote(path_text(o.trace))<<", \"save_path\": "<<quote(path_text(o.save))<<", \"output_directory\": "<<quote(path_text(o.output))<<"}"
     <<",\n  \"rom_memory_unchanged\": "<<(khcom::sha256(session->rom())==source_hash)
+    <<",\n  \"diagnostic_checkpoint\": {\"loaded\": "<<!o.checkpoint.empty()<<", \"input_path\": "<<quote(path_text(o.checkpoint))<<", \"written\": "<<o.checkpoint_out<<", \"initial_core_frame_count\": "<<initial_core_frame_count<<", \"in_game_save_evidence\": false}"
     <<",\n  \"frames_requested\": "<<o.frames<<",\n  \"frames_executed\": "<<completed<<",\n  \"core_frame_count\": "<<session->frames()
     <<",\n  \"user_closed_window\": "<<closed<<",\n  \"wall_seconds\": "<<seconds<<",\n  \"wall_seconds_scope\": \"emulation loop including capture and pacing; excludes startup and final report\",\n  \"realtime_requested\": "<<o.realtime
     <<",\n  \"framebuffer_sha256\": "<<quote(framebuffer_hash(*session))

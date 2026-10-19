@@ -1,4 +1,5 @@
 #include "core/session.hpp"
+#include "core/sha256.hpp"
 #include <algorithm>
 #include <array>
 #include <cstdlib>
@@ -17,6 +18,7 @@ Result<std::unique_ptr<Session>> Session::create(std::vector<std::uint8_t> rom,
     return Error{"invalid_save_size", "Save maior que a capacidade de cartucho suportada."};
   auto self=std::unique_ptr<Session>(new Session);
   self->rom_=std::move(rom);
+  self->initial_save_digest_=sha256(save);
   self->pixels_.resize(width*height);
   static_assert(sizeof(color_t)==sizeof(std::uint32_t));
   self->core_=mCoreCreate(mPLATFORM_GBA);
@@ -97,6 +99,44 @@ Result<std::vector<std::uint8_t>> Session::save() const {
   std::vector<std::uint8_t> result(begin,begin+size);
   std::free(bytes);
   return result;
+}
+
+Result<std::vector<std::uint8_t>> Session::checkpoint() const {
+  constexpr std::size_t header_size=232;
+  auto cartridge=save();if(auto* e=std::get_if<Error>(&cartridge)) return *e;
+  std::vector<std::uint8_t> result(header_size+core_->stateSize(core_));
+  if(!core_->saveState(core_,result.data()+header_size))
+    return Error{"checkpoint_save", "O core rejeitou a captura do estado de diagnóstico."};
+  const std::string version=core_version();
+  if(version.size()>31) return Error{"checkpoint_version", "Versão do core excede o cabeçalho de diagnóstico."};
+  const auto rom_hash=sha256(rom_);
+  const auto state_hash=sha256(std::span(result).subspan(header_size));
+  const std::string magic="KHCP0001";
+  std::copy(magic.begin(),magic.end(),result.begin());
+  std::copy(rom_hash.begin(),rom_hash.end(),result.begin()+8);
+  std::copy(state_hash.begin(),state_hash.end(),result.begin()+72);
+  std::copy(version.begin(),version.end(),result.begin()+136);
+  const auto save_hash=sha256(std::get<std::vector<std::uint8_t>>(cartridge));
+  std::copy(save_hash.begin(),save_hash.end(),result.begin()+168);
+  return result;
+}
+
+Result<Success> Session::restore_checkpoint(std::span<const std::uint8_t> bytes) {
+  constexpr std::size_t header_size=232;
+  if(bytes.size()!=header_size+core_->stateSize(core_))
+    return Error{"checkpoint_size", "Tamanho incompatível com o core de diagnóstico."};
+  auto field=[&](std::size_t start,std::size_t size) {return std::string(bytes.begin()+start,bytes.begin()+start+size);};
+  std::string expected_version=core_version();expected_version.resize(32,'\0');
+  if(field(0,8)!="KHCP0001"||field(8,64)!=sha256(rom_)||field(136,32)!=expected_version)
+    return Error{"checkpoint_identity", "Checkpoint pertence a outra ROM, formato ou versão do core."};
+  if(field(72,64)!=sha256(bytes.subspan(header_size)))
+    return Error{"checkpoint_integrity", "Digest do checkpoint não confere."};
+  if(frames()!=0||field(168,64)!=initial_save_digest_)
+    return Error{"checkpoint_cartridge", "Retome o checkpoint em um core novo com o save de cartucho correspondente."};
+  if(!core_->loadState(core_,bytes.data()+header_size))
+    return Error{"checkpoint_load", "O core rejeitou o checkpoint de diagnóstico."};
+  crashed_=false;
+  return Success{};
 }
 
 SaveInfo Session::save_info() const {

@@ -1,0 +1,56 @@
+name: Desktop diagnostic build (not a release)
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: diagnostic-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2022
+            machine: AMD64
+          - os: macos-15
+            machine: arm64
+          - os: macos-15-intel
+            machine: x86_64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.12.14'
+      - name: Record and assert runner architecture
+        env:
+          EXPECTED_MACHINE: ${{ matrix.machine }}
+        run: python -c "import os,platform; print(platform.platform(), platform.machine()); assert platform.machine() == os.environ['EXPECTED_MACHINE']"
+      - name: Install locked build tooling
+        run: |
+          python -m pip install --require-hashes --only-binary=:all: -r requirements-build.txt
+      - name: Configure MSVC x64
+        if: runner.os == 'Windows'
+        run: cmake -S . -B build-ci -G "Visual Studio 17 2022" -A x64
+      - name: Configure native macOS
+        if: runner.os == 'macOS'
+        env:
+          TARGET_MACHINE: ${{ matrix.machine }}
+        run: cmake -S . -B build-ci -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="$TARGET_MACHINE"
+      - name: Compile diagnostic and authored core fixture
+        run: cmake --build build-ci --config Release --parallel 4
+      - name: Run synthetic core contracts
+        run: ctest --test-dir build-ci -C Release --output-on-failure
+      # Binaries stay on this ephemeral runner. Release packaging, license/source
+      # bundles, universal .app, installers and private game QA remain open gates.

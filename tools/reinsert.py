@@ -30,6 +30,8 @@ def main() -> int:
         rom = read_rom(args.rom, member=args.member)
         parser = load_textgen(fetch=args.fetch_upstream)
         result, report = reinsert_unedited(rom.data, read_catalog(args.catalog), parser=parser)
+        report["input"] = rom.identity["input"]
+        report["catalog_path"] = str(args.catalog.absolute())
         write_private(args.report, json_bytes(report))
         write_private(args.out, result)
         print(json.dumps({"ok": True, "output": str(args.out), "report": str(args.report), **{key: value for key, value in report.items() if key != "intervals"}}, ensure_ascii=False, indent=2))

@@ -24,6 +24,7 @@ def main() -> int:
             raise KhcomError("output_exists", "ROM e relatório precisam de destinos novos e distintos.")
         rom = read_rom(args.rom, member=args.member)
         candidate, report = build_dialogue_probe(rom.data, fetch=args.fetch_upstream)
+        report["input"] = rom.identity["input"]
         write_private(args.report, json_bytes(report))
         write_private(args.out, candidate)
         print(json.dumps({"ok": True, "operation": report["operation"], "output": str(args.out), "report": str(args.report), "sha256": report["target_sha256"], "release_approved": False}, ensure_ascii=False))

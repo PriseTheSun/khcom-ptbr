@@ -167,14 +167,9 @@ def read_catalog(path: Path) -> dict:
     return validate_catalog(value)
 
 
-def reinsert_unedited(data: bytes, catalog: dict, *, parser: Any = None, check_identity: bool = True) -> tuple[bytes, dict]:
-    """Re-encode every parsed text; preserve records, padding and opaque bytes.
-
-    Do not offer an unsafe bypass for edits before glyphs/layout/refs are known.
-    """
+def bind_catalog(catalog: dict, actual: dict) -> list[tuple[dict, dict]]:
+    """Bind editable fields to freshly observed identity, spans and aliases."""
     validate_catalog(catalog)
-    parser = parser or load_textgen()
-    actual = extract_catalog(data, parser=parser, check_identity=check_identity)
     if catalog.get("origin") != actual["origin"] or catalog.get("upstream") != actual["upstream"]:
         raise KhcomError("catalog_origin", "Catálogo não corresponde à ROM/revisão upstream.")
     expected = {item["id"]: item for item in actual["items"]}
@@ -184,13 +179,28 @@ def reinsert_unedited(data: bytes, catalog: dict, *, parser: Any = None, check_i
     if catalog.get("intervals") != actual["intervals"] or catalog.get("pools") != actual["pools"]:
         raise KhcomError("catalog_provenance", "Intervalos ou inventário de pools foram alterados.")
     mutable = {"translation", "translation_input", "status", "reviewer", "evidence_refs"}
-    out = bytearray(data)
-    encodings = parser.load_charmap("us")
-    log = []
+    pairs = []
     for identity, original in expected.items():
         item = submitted[identity]
         if {k: v for k, v in item.items() if k not in mutable} != {k: v for k, v in original.items() if k not in mutable}:
             raise KhcomError("catalog_provenance", "Metadados de origem alterados.", id=identity)
+        pairs.append((original, item))
+    return pairs
+
+
+def reinsert_unedited(data: bytes, catalog: dict, *, parser: Any = None, check_identity: bool = True) -> tuple[bytes, dict]:
+    """Re-encode every parsed text; preserve records, padding and opaque bytes.
+
+    Do not offer an unsafe bypass for edits before glyphs/layout/refs are known.
+    """
+    parser = parser or load_textgen()
+    actual = extract_catalog(data, parser=parser, check_identity=check_identity)
+    pairs = bind_catalog(catalog, actual)
+    out = bytearray(data)
+    encodings = parser.load_charmap("us")
+    log = []
+    for original, item in pairs:
+        identity = original["id"]
         translation = item.get("translation")
         if translation is not None and translation != original["source_text"]:
             raise KhcomError("localization_unverified", "Reinserção editada bloqueada: glifos, pixels e referências ainda não foram validados. Esta fase verifica apenas o round-trip sem edição.", id=identity)

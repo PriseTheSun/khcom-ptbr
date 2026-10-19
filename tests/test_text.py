@@ -14,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 from khcom.errors import KhcomError
 from khcom.text import ROM_BASE, build_dialogue_probe, extract_catalog, export_tables, reinsert_unedited, tokenize
 from khcom.upstream import load_textgen
+from khcom.validation import validate_translations
 
 
 class TextTests(unittest.TestCase):
@@ -131,6 +132,54 @@ class TextTests(unittest.TestCase):
         self.assertIn("6E6E={NL}\n", tables["jp-us.tbl"])
         keys = [line.split("=", 1)[0] for line in tables["game-us.tbl"].splitlines() if not line.startswith(";")]
         self.assertEqual(len(keys), len(set(keys)))
+
+    def test_candidate_reports_overflow_controls_and_unmapped_character_by_id(self):
+        data, parser, _, _ = self.fixture(source="Teste{END}")
+        original = extract_catalog(data, parser=parser, check_identity=False)
+        for text, wanted in (("Mais longo que a reserva{END}", "byte_overflow"), ("Teste", "controls_changed"), ("🧪{END}", "encoding_error"), ("{END}X", "terminator_position")):
+            candidate = copy.deepcopy(original); candidate["items"][0]["translation"] = text
+            report = validate_translations(data, candidate, parser=parser, check_identity=False)
+            self.assertEqual(report["items"][0]["id"], original["items"][0]["id"])
+            self.assertIn(wanted, report["diagnostic_counts"])
+            self.assertEqual(report["blocked_items"], 1)
+            self.assertFalse(report["release_approved"])
+
+    def test_fitting_candidate_does_not_turn_unknown_layout_into_approval(self):
+        data, parser, _, _ = self.fixture(source="Teste{END}")
+        candidate = extract_catalog(data, parser=parser, check_identity=False)
+        candidate["items"][0].update(translation="Olá{END}", status="approved", reviewer="claimed")
+        report = validate_translations(data, candidate, parser=parser, check_identity=False)
+        self.assertEqual(report["items"][0]["candidate_bytes"], 8)
+        self.assertEqual(report["diagnostic_counts"], {"references_unknown": 1, "layout_unknown": 1})
+        self.assertFalse(report["complete_game_coverage"])
+
+    def test_candidate_cannot_override_source_owned_aliases_or_bounds(self):
+        data, parser, _, _ = self.fixture(source="Teste{END}")
+        original = extract_catalog(data, parser=parser, check_identity=False)
+        for field, value in (("aliases", ["invented"]), ("byte_budget", 10000), ("pointer_refs", []), ("font_id", "invented")):
+            candidate = copy.deepcopy(original); candidate["items"][0][field] = value
+            with self.assertRaises(KhcomError) as caught:
+                validate_translations(data, candidate, parser=parser, check_identity=False)
+            self.assertEqual(caught.exception.code, "catalog_provenance")
+
+    def test_no_edit_is_not_claimed_as_translation_and_nfc_is_explicit(self):
+        data, parser, _, _ = self.fixture(source="Teste{END}")
+        candidate = extract_catalog(data, parser=parser, check_identity=False)
+        report = validate_translations(data, candidate, parser=parser, check_identity=False)
+        self.assertEqual(report["changed_items"], 0)
+        self.assertEqual(report["items"][0]["status"], "no_edit_to_validate")
+        candidate["items"][0]["translation"] = "a\u0301{END}"
+        report = validate_translations(data, candidate, parser=parser, check_identity=False)
+        self.assertIn("editorial_nfc", report["diagnostic_counts"])
+
+    def test_literal_nul_is_validated_as_encoded_terminator(self):
+        data, parser, _, _ = self.fixture(source="Teste{END}")
+        candidate = extract_catalog(data, parser=parser, check_identity=False)
+        candidate["items"][0]["translation"] = "A\0B{END}"
+        report = validate_translations(data, candidate, parser=parser, check_identity=False)
+        self.assertIn("invisible_editorial_characters", report["diagnostic_counts"])
+        issue = next(d for d in report["items"][0]["diagnostics"] if d["code"] == "controls_changed")
+        self.assertEqual(issue["actual"], ["END", "END"])
 
 
 if __name__ == "__main__":

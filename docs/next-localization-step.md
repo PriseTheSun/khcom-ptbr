@@ -1,6 +1,21 @@
 # Próxima implementação de localização
 
-O próximo trabalho é fechar o mapa de consumidores e um piloto de créditos,
+Atualização de implementação: a aquisição dos produtores foi fixada no manifesto
+upstream, e o parser somente leitura de roteiro foi implementado em
+`tools/khcom/credits.py`. O array de 632 ponteiros corresponde exatamente à ROM;
+631 registros referenciam todos os 255 itens. A medição distingue fontes, comandos
+e limites. Consulte `credits.md` e `private/reports/credits-audit-v2.json`.
+O menu de baralhos de Sora também foi exercitado: os 24 acentos persistiram
+em Quick Save e foram retomados com a ROM original, conforme `menu-probe.md`.
+O fluxo diagnóstico dos créditos Sora/Riku passou pela inicialização original
+e pela rolagem, com 388 desenhos por variante, conforme `credits-mode-entry.md`.
+`credits-consumers.md` amplia a busca estática ao corpus completo de 750 fontes
+e delimita um piloto US de reuso dos índices 210–233. A fonte de oito pixels
+continua exigindo desenho e verificação próprios para os acentos.
+Isso avança os passos 1–3 abaixo, sem fechar o perfil acentuado de créditos,
+reuso de índices/realocação nem as provas dos outros renderizadores.
+
+O próximo trabalho é fechar o piloto de créditos,
 antes de ampliar qualquer atlas. Não surgiu necessidade de mudar a arquitetura
 libmgba + SDL + BPS nem de pedir uma decisão nova ao usuário. Os detalhes abaixo
 são investigação técnica executável dentro de M1/M2, não dependências externas.
@@ -52,9 +67,11 @@ Há um menu concreto para o próximo teste: nomes de baralhos. Em
 e [`card_deckmenu2_riku.c`](https://github.com/Pheenoh/khcom/blob/5dc49b75068bfe24e07bdaf365570d64682680c3/src/card/card_deckmenu2_riku.c#L818),
 o produtor chama `LoadTextSlots(GetDeckName(...))`; na versão US, essa função
 seleciona `LoadLatinTextSlots`. `SetDeckName` copia code units de dois bytes
-em US. O editor copia 20 bytes e força os bytes 18/19 a zero: esse caminho
-oferece até nove code units de nome, além de exigir largura/caixa e save
-verificados. Os três nomes padrão do catálogo usam `game`, reserva original
+em US. O editor copia 20 bytes e força os bytes 18/19 a zero. A capacidade do
+buffer é nove code units, mas `AppendKeyboardChar` só insere com contagem ≤7:
+o limite efetivo da UI é **oito caracteres**. A prova de três nomes de oito
+acentos, caixa e Quick Save está em `menu-probe.md`; não cobre nomes arbitrários
+nem persistência em slot normal. Os três nomes padrão do catálogo usam `game`, reserva original
 14 bytes cada. Não presumir que nomes de baralho US usem CP932 ou fonte pequena.
 
 Para ampliar realmente o atlas de 45 glifos, a conta depende do contrato
@@ -117,20 +134,27 @@ ou mudança de tabelas. Os contadores passariam de 524 para 548. Há capacidade
 lógica em páginas existentes, mas ainda precisamos selecionar e comprovar
 24 códigos que não conflitem com roteiro, dados originais ou outro consumidor.
 
+Os 1.200 bytes são crescimento líquido. Realocar diretamente os quatro arrays
+ampliados exige acomodar 27.400 bytes completos (26.200 atuais + 1.200), com
+alinhamento e referências verificadas. Usar apenas uma reserva de 1.200 bytes
+exigiria mover/compactar proprietários adjacentes ou segmentar o renderer;
+isso não foi implementado nem aprovado como prova de realocação.
+
 Uma alternativa técnica a investigar primeiro é reaproveitar índices realmente
-inalcançáveis, preservando os tamanhos atuais. A simulação fonte do mapeamento
-para os 255 itens do pool de créditos encontrou 78 índices na união dos bytes
-originais, incluindo prefixos como se fossem caracteres, sem fallback. Sobram
-446 índices **não observados nesse conjunto**, candidatos a investigação.
-Isso não é prova de que sejam reutilizáveis: faltam a ordem real dos ponteiros
-do roteiro, estados de fonte, todos os produtores e referências, além de teste
-do caminho completo. Reuso só será escolhido após essa prova; caso contrário,
+inalcançáveis, preservando os tamanhos atuais. A auditoria atual das 631 linhas
+interpreta os prefixos e a ordem dos ponteiros: usa 63 índices na fonte 0 e 58
+na fonte 1, com união de 70. Sobram 454 índices não observados nas duas fontes.
+A investigação em `credits-reference-investigation.md` liga os produtores a
+instruções Thumb e apresenta 24 candidatos concretos. Isso não prova que sejam
+reutilizáveis: faltam fechar consumidores indiretos e exercitar o caminho
+completo nas duas variantes. Reuso só será escolhido após essa prova; caso contrário,
 alocação interna verificada continua o caminho previsto.
 
 Há limites concretos a modelar antes da tradução: o ramo `~` usa `buf[80]`,
 com até 76 bytes antes do primeiro separador quando acrescenta três espaços e
 terminador, e até 79 bytes no segundo trecho antes do terminador. A fila tem
-256 entradas u16; sua ocupação real precisa ser derivada das rotinas produtoras.
+256 entradas u16 e capacidade útil de 255; o modelo atual verifica os produtores
+e a drenagem por chamada, sem afirmar que observou o timing em runtime.
 O texto usa um mapa de 30 tiles de largura, mas a janela visível é configurada
 entre x=16 e x=224; medir apenas contra 240px não prova ausência de corte.
 Esses limites vêm de fonte e ainda devem ser confirmados no caminho runtime.
@@ -165,29 +189,29 @@ comparação de bytes; alternativamente, usar as âncoras e rastreamento ARMv4T
 com confirmação de instruções. A análise genérica ARMv7 do REA não substitui
 essa validação.
 
-## Próximo trabalho, em ordem
+## Trabalho seguinte a partir das provas atuais
 
-1. **Fixar proveniência dos novos produtores.** Acrescentar `sroll_tmr.c`, os
-   consumidores de baralho e metadados necessários ao único manifesto upstream,
-   com hashes; não criar outro dono de download/parser.
-2. **Fechar um menu real.** Chegar ao nome do baralho no harness, identificar
-   produtor/renderer, medir caixa e testar matriz latina de 24 acentos, destaque
-   e save/reload. Registrar separadamente quais rotas compactas permanecem
-   sem alcance comprovado. Não satisfazer o gate de menu com overlay de debug.
-3. **Construir o parser de roteiro dos créditos.** Preservar prefixos, ordem
-   `sStaffRollLines`, troca de fonte e cores; exportar contexto/limites; round-trip
-   de bytes e testes de códigos ausentes, comandos e buffers de 80 bytes.
-4. **Fechar referências e ocupação do subsistema de créditos.** Gerar ledger
-   de índices usados por fonte e todas as referências. Demonstrar reuso de
-   24 índices ou alocação interna para crescimento de 1.200 bytes; rejeitar
-   sobreposição, pointers pendentes e qualquer expansão além de 32 MiB.
-5. **Implementar um perfil de créditos PT-BR e atlas piloto.** Mapear 24 códigos
-   a glifos/métricas de ambos os estilos; validar round-trip dos recursos,
-   sintaxe intacta e caracteres não mapeados. Só então produzir candidata
-   privada e BPS do piloto.
-6. **Executar o piloto com os dois estilos e prefixos relevantes.** Comparar
-   capturas, cortes/acentos, largura, cor, alinhamento e continuação; manter
-   as etapas Sora/Riku/gráfico/vídeo ainda abertas até suas próprias provas.
+A aquisição dos produtores, o menu de baralhos, o parser dos créditos e a
+investigação de seus consumidores já têm resultados delimitados nos documentos
+citados acima. Não precisam ser repetidos sem mudança de fonte ou nova evidência.
+
+1. **Fechar o piloto privado de créditos PT-BR.** Mapear os 24 códigos aos
+   glifos/métricas dos dois estilos, revalidar o conjunto usado original e
+   limitar o reuso aos índices 210–233. Comparar a candidata contra a ROM
+   original por spans, comandos, largura e execução. Os 1.200 bytes são as
+   quatro regiões reutilizadas; expansão/realocação continua sendo outra prova.
+2. **Consolidar o perfil no pipeline somente após a prova.** Acrescentar codec,
+   tabela e receita reprodutíveis com testes próprios, sem incluir bitmaps
+   derivados nem liberar o codec para outros domínios. A revisão tipográfica
+   de 8px precisa acompanhar capturas 1x e ampliadas, sombra e destaque.
+3. **Completar as outras superfícies da prova vertical.** Continuam pendentes
+   diálogo Riku, identificação dos menus compactos, gráficos/consumidores não
+   cobertos pelo aviso do título e inventário audiovisual. A prova Sora de uma
+   fala, o nome de baralho e o aviso gráfico não substituem esses casos.
+4. **Fechar limites e referências antes da tradução em massa.** Integrar
+   métricas por caixa e valores dinâmicos, resolver referências/aliases e
+   demonstrar a realocação necessária sem sobrescrever proprietários conhecidos
+   nem ampliar o cartucho além de 32 MiB. Manter cada incógnita explícita.
 
 Esse trabalho já está contemplado por tarefas 1.9, 2.5–2.9 e 2.14, pelo design
 de codecs por domínio/ocupação de ROM, e pelos requisitos de

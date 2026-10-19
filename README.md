@@ -16,6 +16,12 @@ em `docs/implementation.md` separa resultados executados e pendências.
 - Criação/aplicação BPS com CRCs, SHA-256 e relatório dos literais a revisar.
 - Harness nativo libmgba/SDL para frames, entrada reproduzível, capturas e saves.
 - Prova experimental de uma fala em PT-BR, com acentos, executada e inspecionada.
+- Piloto gráfico APERTE INICIAR, preservando os cinco quadros do aviso original.
+- Prova dos 24 acentos em nomes de baralhos, com Quick Save e retomada.
+- Auditoria do roteiro de créditos, fontes, códigos e limites de bytes/largura.
+- Mapa conjunto de textos e 11.347 recursos, com referências desconhecidas explícitas.
+- Extração e reconstrução idêntica de 4.900 recursos gráficos declarados.
+- Diagnóstico de candidatos textuais por ID, com bloqueios explícitos de layout/referências.
 
 As ferramentas não baixam ROM, BIOS da Nintendo, saves ou assets do jogo.
 O usuário fornece a ROM. Nenhum arquivo original é incluído no código-fonte
@@ -28,6 +34,7 @@ preparado para revisão.
 | `tools/`, `tests/` | Pipeline Python e testes com dados próprios |
 | `app/`, `core/`, `platform/`, `cmake/` | Harness C++20 e integração do core |
 | `manifests/` | Revisões, hashes e proveniência das dependências |
+| `.github/workflows/` | CI de fontes e compilação do diagnóstico sem ROM |
 | `docs/` | Contratos, comandos e resultados verificáveis |
 | `private/` | ROM, catálogos, imagens, saves e resultados locais; ignorada |
 | `.deps/`, `.venv/`, `.build-tools/`, `build/` | Dependências e builds locais; ignorados |
@@ -64,9 +71,14 @@ criptografadas não fazem parte do importador inicial; detalhes e limites estão
 em `tools/khcom/rom.py`.
 
 Leia [localização](docs/localization.md) para CSV, `.tbl` e round-trip;
+[validação](docs/validation.md) para erros por ID e limites ainda desconhecidos;
 [runtime](docs/runtime.md) para compilar e executar o diagnóstico;
 [patches](docs/patches.md) para BPS e seu gate de distribuição;
-[fontes](docs/fonts.md) para o probe de diálogo e os renderizadores pendentes.
+[fontes](docs/fonts.md) para o probe de diálogo e os renderizadores pendentes;
+[gráficos](docs/graphics.md) para extração sem perda de tiles, paletas e animações;
+[piloto do título](docs/title-graphic-probe.md) e [baralhos](docs/menu-probe.md) para provas delimitadas;
+[créditos](docs/credits.md) para a auditoria de roteiro e largura;
+[mapa de recursos](docs/asset-map.md) para ocupação e referências pendentes.
 
 ## Verificação pública, sem ROM
 
@@ -87,6 +99,9 @@ contextual, suporte verificado a todas as fontes, edição gráfica/vídeos,
 realocação, prova visual das duas campanhas e o aplicativo final. Um codec que
 aceita `ã` não comprova que o renderer desenha esse glifo.
 
-Windows, macOS universal, assinatura/notarização, CI de distribuição e Android
-ainda não são entregas verificadas. Consulte o checklist OpenSpec antes de
+O diagnóstico possui um binário macOS com slices Intel/Apple Silicon; Intel foi
+testado via Rosetta. Isso não é o `.app` final nem QA em hardware Intel.
+Os [workflows de CI](docs/ci.md) foram validados estaticamente, sem execução remota.
+Windows, assinatura/notarização, CI de distribuição e Android ainda não são
+entregas verificadas. Consulte o checklist OpenSpec antes de
 anunciar qualquer plataforma ou porcentagem de tradução concluída.

@@ -1,0 +1,7 @@
+# CMake/Ninja wheels for the desktop CI matrix. No source distribution fallback.
+cmake==3.31.10 \
+    --hash=sha256:ad697643a00d9ba85179590a383c4f7401169b55ebf4b8b2938daf28c6bdeb6d \
+    --hash=sha256:f1ea1fe826355560e8976c3d5794d9357444209bc0e0d56676c71e6a571fd474
+ninja==1.13.0 \
+    --hash=sha256:fa2a8bfc62e31b08f83127d1613d10821775a0eb334197154c4d6067b7068ff1 \
+    --hash=sha256:fb8ee8719f8af47fed145cced4a85f0755dd55d45b2bddaf7431fa89803c5f3e

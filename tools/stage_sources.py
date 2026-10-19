@@ -10,12 +10,13 @@ from khcom.errors import KhcomError
 from khcom.io import read_file, write_json_new, write_new
 
 ROOT = Path(__file__).resolve().parents[1]
-ROOT_FILES = {"README.md", ".gitignore", "pyproject.toml", "requirements-tools.txt", "CMakeLists.txt"}
+ROOT_FILES = {"README.md", ".gitignore", "pyproject.toml", "requirements-tools.txt", "requirements-build.txt", "CMakeLists.txt"}
 SOURCE_AREAS = {
     "app": {".cpp", ".hpp"}, "core": {".cpp", ".hpp"},
     "platform": {".cpp", ".hpp"}, "cmake": {".cmake"},
     "tools": {".py"}, "tests": {".py", ".cpp", ".hpp"},
     "manifests": {".json"}, "docs": {".md"},
+    ".github/workflows": {".yml"},
 }
 
 
@@ -24,8 +25,11 @@ def inventory(root: Path) -> list[tuple[Path, bytes]]:
     candidates = [root / name for name in ROOT_FILES if (root / name).exists()]
     for directory, suffixes in SOURCE_AREAS.items():
         parent = root / directory
-        if parent.is_symlink():
-            raise KhcomError("stage_symlink", "Uma área de fontes é um link.", path=str(parent))
+        ancestor = root
+        for part in Path(directory).parts:
+            ancestor /= part
+            if ancestor.is_symlink():
+                raise KhcomError("stage_symlink", "Uma área de fontes é um link.", path=str(ancestor))
         if not parent.exists():
             continue
         for path in parent.rglob("*"):
